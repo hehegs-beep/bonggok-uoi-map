@@ -6,6 +6,9 @@
 
 파일은 `index.html` 하나뿐이고, 빌드나 서버 설치가 필요 없습니다.
 
+**배포 주소:** <https://hehegs-beep.github.io/bonggok-uoi-map/>
+(GitHub 저장소 <https://github.com/hehegs-beep/bonggok-uoi-map> 의 `main` 브랜치에서 GitHub Pages로 자동 배포됩니다. `index.html`을 고쳐서 푸시하면 1분 안에 반영됩니다.)
+
 ## 1. 여는 방법
 
 | 방법 | 동작 | 비고 |
