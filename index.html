@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>봉곡 1학년 UOI 매핑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Gowun+Batang:wght@700&display=swap">
+<style>
+/* Layout: app bar → sticky filter rail → view tabs → content; detail opens as a right-side drawer. */
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface-2: #eef0ea;
+  --fg: #1d2420;
+  --fg-2: #55605a;
+  --fg-3: #8a948e;
+  --line: #d9ded6;
+  --line-2: #c3cac0;
+  --accent: #0f6b5f;
+  --accent-fg: #ffffff;
+  --accent-soft: #dcefe9;
+  --warn: #b45309;
+  --warn-soft: #fdebd0;
+  --bad: #b42318;
+  --bad-soft: #fde2df;
+  --ok: #15803d;
+  --shadow: 0 10px 30px rgba(20, 30, 25, .14);
+  /* theme badge color recipe (hue comes from each theme) */
+  --bd-s: 70%; --bd-l: 92%;
+  --bf-s: 55%; --bf-l: 30%;
+  --bb-s: 45%; --bb-l: 76%;
+  --font-ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-display: "Gowun Batang", "Apple Myungjo", "Batang", serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181a; --surface: #1c2224; --surface-2: #232b2d; --fg: #e4e8e3; --fg-2: #a6b0a9; --fg-3: #717b75;
+    --line: #2f3a3b; --line-2: #42504f; --accent: #46b8a6; --accent-fg: #0f1a18; --accent-soft: #1b3531;
+    --warn: #f0a24a; --warn-soft: #3a2a14; --bad: #f08a80; --bad-soft: #3d1d1a; --ok: #5ccf86;
+    --shadow: 0 12px 34px rgba(0, 0, 0, .5);
+    --bd-s: 40%; --bd-l: 20%; --bf-s: 70%; --bf-l: 78%; --bb-s: 35%; --bb-l: 32%;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181a; --surface: #1c2224; --surface-2: #232b2d; --fg: #e4e8e3; --fg-2: #a6b0a9; --fg-3: #717b75;
+  --line: #2f3a3b; --line-2: #42504f; --accent: #46b8a6; --accent-fg: #0f1a18; --accent-soft: #1b3531;
+  --warn: #f0a24a; --warn-soft: #3a2a14; --bad: #f08a80; --bad-soft: #3d1d1a; --ok: #5ccf86;
+  --shadow: 0 12px 34px rgba(0, 0, 0, .5);
+  --bd-s: 40%; --bd-l: 20%; --bf-s: 70%; --bf-l: 78%; --bb-s: 35%; --bb-l: 32%;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-ui); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+h1, h2, h3, h4 { margin: 0; text-wrap: balance; }
+ul { list-style: none; margin: 0; padding: 0; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- app bar ---------- */
+.appbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 20px 10px; border-bottom: 1px solid var(--line); background: var(--surface);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand h1 { font-family: var(--font-display); font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+.brand .sub { color: var(--fg-2); font-size: 12.5px; white-space: nowrap; }
+.spacer { flex: 1; }
+.sync { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-2); }
+.sync .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--fg-3); flex: none; }
+.sync.ok .dot { background: var(--ok); }
+.sync.busy .dot { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+.sync.err .dot { background: var(--bad); }
+@keyframes pulse { 50% { opacity: .35; } }
+.iconbtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface);
+  color: var(--fg); font-size: 12.5px;
+}
+.iconbtn:hover { background: var(--surface-2); }
+.iconbtn svg { width: 15px; height: 15px; }
+.iconbtn.spin svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- filter rail ---------- */
+.rail {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  padding: 10px 20px 0;
+}
+.rail-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.search { position: relative; flex: 1 1 260px; min-width: 0; }
+.search input {
+  width: 100%; height: 36px; padding: 0 34px 0 34px; border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--bg);
+}
+.search svg { position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--fg-3); pointer-events: none; }
+.search .clear { position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border: 0; background: none; color: var(--fg-3); border-radius: 6px; }
+.search .clear:hover { background: var(--surface-2); color: var(--fg); }
+.filtertoggle { display: none; }
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, max-content)); gap: 6px 22px; padding: 10px 0 8px; }
+.group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.group .label { font-size: 11.5px; letter-spacing: .06em; color: var(--fg-3); text-transform: uppercase; margin-right: 2px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
+  border: 1px solid var(--line-2); border-radius: 999px; background: var(--surface); font-size: 12.5px; color: var(--fg-2);
+}
+.chip:hover { border-color: var(--fg-3); color: var(--fg); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.chip .sw { width: 9px; height: 9px; border-radius: 50%; background: hsl(var(--h) 60% 55%); flex: none; }
+.chip[aria-pressed="true"] .sw { outline: 2px solid var(--accent-fg); outline-offset: -1px; }
+.chip.none .sw { background: none; border: 1.5px dashed currentColor; }
+select.area { height: 26px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); padding: 0 6px; font-size: 12.5px; max-width: 220px; }
+.reset { border: 0; background: none; color: var(--accent); font-size: 12.5px; padding: 0 4px; height: 26px; }
+.reset[disabled] { color: var(--fg-3); cursor: default; }
+.tabs { display: flex; gap: 2px; margin: 0 -4px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  border: 0; background: none; padding: 8px 12px 10px; font-size: 13.5px; font-weight: 500; color: var(--fg-2);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center;
+}
+.tab .n { font-size: 11.5px; color: var(--fg-3); background: var(--surface-2); padding: 1px 7px; border-radius: 999px; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab[aria-selected="true"] .n { background: var(--accent-soft); color: var(--accent); }
+
+/* ---------- content ---------- */
+main { padding: 18px 20px 60px; max-width: 1480px; margin: 0 auto; }
+.status-line { color: var(--fg-2); font-size: 12.5px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.empty { padding: 50px 20px; text-align: center; color: var(--fg-2); border: 1px dashed var(--line-2); border-radius: var(--radius); }
+.empty strong { display: block; color: var(--fg); font-size: 15px; margin-bottom: 6px; }
+
+.badge {
+  --h: 0;
+  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 6px; flex: none;
+  font-size: 11px; font-weight: 600; letter-spacing: .03em; line-height: 1;
+  background: hsl(var(--h) var(--bd-s) var(--bd-l)); color: hsl(var(--h) var(--bf-s) var(--bf-l));
+  border: 1px solid hsl(var(--h) var(--bb-s) var(--bb-l));
+}
+.badge.none { background: none; color: var(--fg-3); border: 1px dashed var(--line-2); font-weight: 500; }
+.badge.lg { height: 26px; font-size: 12.5px; padding: 0 10px; border-radius: 8px; }
+.code {
+  display: inline-block; padding: 1px 6px; border-radius: 5px; background: var(--surface-2); color: var(--fg-2);
+  font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: .01em;
+}
+.subjtag { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; }
+
+/* unit view */
+.subject { margin-bottom: 34px; }
+.subject > h2 {
+  font-family: var(--font-display); font-size: 20px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 8px; border-bottom: 2px solid var(--fg); margin-bottom: 14px;
+}
+.subject > h2 .meta { font-family: var(--font-ui); font-size: 12.5px; font-weight: 400; color: var(--fg-2); }
+.sem { margin-bottom: 18px; }
+.sem > h3 { font-size: 12.5px; letter-spacing: .06em; color: var(--fg-2); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.sem > h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.units { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+.unit { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.unit > header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.unit > header h4 { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
+.unit > header .n { font-size: 11.5px; color: var(--fg-3); }
+.unit > header .themes { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.std { width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; display: grid; gap: 4px; border-top: 1px solid var(--line); }
+.std:first-child { border-top: 0; }
+.std:hover { background: var(--surface-2); }
+.std .row { display: flex; align-items: center; gap: 8px; }
+.std .row .sp { flex: 1; }
+.std .txt { font-size: 13px; line-height: 1.45; color: var(--fg); }
+.std .area { font-size: 11px; color: var(--fg-3); }
+
+/* theme board */
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; align-items: start; }
+.col { --h: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; overflow: hidden; }
+.col > header { padding: 10px 12px 10px 14px; border-left: 5px solid hsl(var(--h) 60% 55%); border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
+.col.none > header { border-left: 5px dashed var(--line-2); }
+.col > header .abbr { font-size: 11px; letter-spacing: .08em; color: hsl(var(--h) var(--bf-s) var(--bf-l)); font-weight: 700; }
+.col.none > header .abbr { color: var(--fg-3); }
+.col > header .ko { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.col > header .ko .n { font-size: 12px; color: var(--fg-3); font-weight: 500; }
+.col > header .en { font-size: 11.5px; color: var(--fg-2); }
+.tcard { width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; padding: 10px 12px; display: grid; gap: 5px; }
+.tcard:first-of-type { border-top: 0; }
+.tcard:hover { background: var(--surface-2); }
+.tcard .row { display: flex; align-items: center; gap: 8px; }
+.tcard .row .sp { flex: 1; }
+.tcard .txt { font-size: 13px; line-height: 1.45; }
+.places { display: flex; flex-wrap: wrap; gap: 4px; }
+.place { font-size: 11px; color: var(--fg-2); background: var(--surface-2); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+
+/* standards table */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 860px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+th { font-size: 11.5px; letter-spacing: .05em; color: var(--fg-2); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; white-space: nowrap; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr.unmapped td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+tbody tr:last-child td { border-bottom: 0; }
+td.subj { white-space: nowrap; color: var(--fg-2); }
+td.codecell { white-space: nowrap; }
+td.textcell { min-width: 300px; }
+td.semcell .pl { display: flex; align-items: center; gap: 5px; margin: 2px 0; font-size: 12px; color: var(--fg-2); white-space: nowrap; }
+td.expl { white-space: nowrap; color: var(--fg-3); font-size: 12px; }
+td.expl.yes { color: var(--accent); }
+
+/* summary */
+.summary { display: grid; gap: 22px; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 26px; font-size: 13.5px; color: var(--fg-2); }
+.stats b { color: var(--fg); font-size: 20px; font-weight: 600; margin-right: 4px; }
+.summary h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.summary .note { font-size: 12px; color: var(--fg-3); margin-top: 6px; }
+.matrix th, .matrix td { text-align: center; white-space: nowrap; }
+.matrix th:first-child, .matrix td:first-child { text-align: left; }
+.matrix td.v { --h: 0; --a: 0; background: hsl(var(--h) 60% 55% / var(--a)); font-variant-numeric: tabular-nums; }
+.matrix td.v.zero { color: var(--fg-3); }
+.matrix td.total, .matrix tr.total td { font-weight: 600; }
+.matrix th .abbr { display: block; font-size: 11px; letter-spacing: .08em; }
+.matrix th .ko { display: block; font-weight: 400; font-size: 11px; color: var(--fg-3); }
+.matrix table { min-width: 0; }
+.unmapped-list { display: grid; gap: 10px; }
+.unmapped-list .grp { display: flex; gap: 8px 6px; flex-wrap: wrap; align-items: center; }
+.unmapped-list .grp .subj { font-size: 12.5px; color: var(--fg-2); width: 86px; flex: none; }
+.pill { border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 2px 10px 2px 6px; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; max-width: 100%; }
+.pill:hover { border-color: var(--fg-3); }
+.pill .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px; }
+
+/* ---------- dialogs ---------- */
+dialog { border: 0; padding: 0; background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(10, 14, 12, .45); }
+dialog.drawer {
+  margin: 0 0 0 auto; width: min(520px, 100%); height: 100%; max-height: 100%; max-width: 100%;
+  border-left: 1px solid var(--line); display: flex; flex-direction: column;
+}
+dialog.drawer[open] { animation: slidein .22s ease-out; }
+@keyframes slidein { from { transform: translateX(24px); opacity: 0; } }
+.dhead { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.dhead .code { font-size: 13px; padding: 3px 8px; }
+.dhead .close { margin-left: auto; }
+.dbody { padding: 16px 18px 28px; overflow: auto; display: grid; gap: 18px; align-content: start; }
+.dbody .text { font-size: 16.5px; line-height: 1.5; font-weight: 500; }
+.dbody .kv { font-size: 12.5px; color: var(--fg-2); display: flex; gap: 12px; flex-wrap: wrap; }
+.dbody h3 { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
+.dbody .expl { font-size: 13.5px; line-height: 1.7; color: var(--fg); background: var(--surface-2); padding: 12px 14px; border-radius: 8px; max-width: 62ch; }
+.dbody .expl.none { color: var(--fg-3); background: none; border: 1px dashed var(--line-2); }
+.plist { display: grid; gap: 6px; }
+.plist li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+.plist li .sem { color: var(--fg-2); font-variant-numeric: tabular-nums; white-space: nowrap; margin: 0; }
+.plist li .unit { font-weight: 600; border: 0; background: none; }
+.plist li .sp { flex: 1; }
+.plist li a { font-size: 11.5px; white-space: nowrap; text-decoration: none; }
+.themesum { display: flex; gap: 6px; flex-wrap: wrap; }
+
+dialog.modal { width: min(560px, calc(100% - 32px)); border-radius: 12px; border: 1px solid var(--line); }
+.mhead { display: flex; align-items: center; padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
+.mhead h2 { font-size: 16px; }
+.mbody { padding: 16px 20px 20px; display: grid; gap: 16px; }
+.field { display: grid; gap: 5px; }
+.field label { font-size: 12.5px; font-weight: 600; }
+.field .hint { font-size: 12px; color: var(--fg-2); line-height: 1.5; }
+.field input[type="url"], .field select, .field input[type="text"] { height: 34px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg); padding: 0 10px; width: 100%; }
+.field code { font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+.mfoot { display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 4px; }
+.btn { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--surface); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.btn.quiet { border-color: transparent; color: var(--fg-2); }
+
+/* toast */
+.toast {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 999px; font-size: 12.5px; z-index: 50;
+  box-shadow: var(--shadow); max-width: calc(100% - 32px); opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.toast.show { opacity: 1; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 720px) {
+  .appbar, .rail, main { padding-left: 16px; padding-right: 16px; }
+  .brand .sub { display: none; }
+  .filtertoggle { display: inline-flex; }
+  .groups { display: none; }
+  .rail.open .groups { display: grid; grid-template-columns: 1fr; }
+  .units, .board { grid-template-columns: 1fr; }
+  dialog.drawer { width: 100%; border-left: 0; }
+  .stats b { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.drawer[open], .sync.busy .dot, .iconbtn.spin svg { animation: none; }
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand">
+    <h1>봉곡 1학년 UOI 매핑</h1>
+    <span class="sub">2022 개정 성취기준 × PYP 초학문적 주제</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="sync" id="sync" title="데이터 출처: 구글 시트 「1학년 성취기준」 탭">
+    <span class="dot"></span><span id="syncText">불러오는 중…</span>
+  </div>
+  <button class="iconbtn" id="refreshBtn" title="지금 새로고침">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+    <span>새로고침</span>
+  </button>
+  <a class="iconbtn" id="sheetLink" href="#" target="_blank" rel="noopener" title="구글 시트 열기">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"/></svg>
+    <span>시트</span>
+  </a>
+  <button class="iconbtn" id="settingsBtn" title="설정">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</header>
+
+<div class="rail" id="rail">
+  <div class="rail-top">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="코드, 성취기준, 해설, 단원 검색 (예: 2국01, 띄어 읽기)" autocomplete="off">
+      <button class="clear" id="qClear" title="검색어 지우기" hidden>×</button>
+    </div>
+    <button class="chip filtertoggle" id="filterToggle" aria-expanded="false">필터 <span class="n" id="filterCount"></span></button>
+    <button class="reset" id="resetBtn" disabled>필터 초기화</button>
+  </div>
+  <div class="groups" id="groups">
+    <div class="group" id="gSubject"><span class="label">교과</span></div>
+    <div class="group" id="gSemester"><span class="label">학기</span></div>
+    <div class="group" id="gArea"><span class="label">영역</span><select class="area" id="area"><option value="">전체</option></select></div>
+    <div class="group" id="gTheme"><span class="label">주제</span></div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-view="unit" aria-selected="true">단원별 <span class="n" id="nUnit">–</span></button>
+    <button class="tab" role="tab" data-view="theme" aria-selected="false">주제별 <span class="n" id="nTheme">–</span></button>
+    <button class="tab" role="tab" data-view="standard" aria-selected="false">성취기준별 <span class="n" id="nStandard">–</span></button>
+    <button class="tab" role="tab" data-view="summary" aria-selected="false">요약</button>
+  </div>
+</div>
+
+<main>
+  <div class="status-line" id="statusLine"></div>
+  <section data-view="unit" id="viewUnit"></section>
+  <section data-view="theme" id="viewTheme" hidden></section>
+  <section data-view="standard" id="viewStandard" hidden></section>
+  <section data-view="summary" id="viewSummary" hidden></section>
+</main>
+
+<dialog class="drawer" id="detail" aria-label="성취기준 상세">
+  <div class="dhead">
+    <span class="code" id="dCode"></span>
+    <span class="subjtag" id="dSubj"></span>
+    <button class="iconbtn close" id="dClose" aria-label="닫기">닫기</button>
+  </div>
+  <div class="dbody" id="dBody"></div>
+</dialog>
+
+<dialog class="modal" id="settings" aria-label="설정">
+  <div class="mhead"><h2>데이터 연결 설정</h2></div>
+  <form class="mbody" id="settingsForm" method="dialog">
+    <div class="field">
+      <label for="sUrl">CSV 주소 (선택)</label>
+      <input type="url" id="sUrl" placeholder="비워 두면 기본 시트(gid=0)를 직접 읽습니다">
+      <div class="hint">「파일 › 공유 › 웹에 게시」에서 받은 CSV 주소를 넣으면 그 주소를 읽습니다. 비워 두면 아래 기본 주소를 사용합니다.<br><code id="sDefaultUrl"></code></div>
+    </div>
+    <div class="field">
+      <label for="sTransport">전송 방식</label>
+      <select id="sTransport">
+        <option value="auto">자동 (fetch 실패 시 JSONP로 전환)</option>
+        <option value="csv">CSV fetch만</option>
+        <option value="jsonp">JSONP만 (파일을 직접 열 때)</option>
+      </select>
+      <div class="hint">파일을 더블클릭해 열면(file://) 브라우저가 fetch를 막으므로 자동으로 JSONP를 씁니다. 웹 서버에 올리면 CSV fetch가 쓰입니다.</div>
+    </div>
+    <div class="field">
+      <label for="sPoll">자동 새로고침</label>
+      <select id="sPoll">
+        <option value="30">30초마다</option>
+        <option value="60">1분마다</option>
+        <option value="180">3분마다</option>
+        <option value="0">끄기 (수동 새로고침만)</option>
+      </select>
+      <div class="hint">탭이 보이는 동안만 확인하고, 창으로 돌아올 때도 한 번 확인합니다.</div>
+    </div>
+    <div class="mfoot">
+      <button type="button" class="btn quiet" id="sClearCache">캐시 지우기</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="sCancel">취소</button>
+      <button type="submit" class="btn primary">저장하고 다시 불러오기</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ===================== configuration ===================== */
+const CONFIG = {
+  sheetId: '18_ZA6uaC1YJq5xwXqs3c8XGuQ3gamQMg0MINzBC0FMk',
+  gid: '0',                 // 「1학년 성취기준」 탭 (원본). 다른 탭은 여기서 계산해 보여준다.
+  pollSeconds: 60,
+};
+CONFIG.sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}`;
+CONFIG.gvizBase = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${CONFIG.gid}&headers=1`;
+CONFIG.csvUrl = `${CONFIG.gvizBase}&tqx=out:csv`;
+
+const THEMES = [
+  { key: 'WWA',   ko: '우리는 누구인가',          en: 'Who we are',                      h: 345 },
+  { key: 'WWAPT', ko: '우리가 속한 공간과 시간',   en: 'Where we are in place and time',  h: 25  },
+  { key: 'HWEO',  ko: '우리 자신을 표현하는 방법', en: 'How we express ourselves',        h: 285 },
+  { key: 'HTWW',  ko: '세계가 돌아가는 방식',      en: 'How the world works',             h: 210 },
+  { key: 'HWOO',  ko: '우리 자신을 조직하는 방식', en: 'How we organize ourselves',       h: 100 },
+  { key: 'STP',   ko: '우리 모두의 지구',          en: 'Sharing the planet',              h: 175 },
+];
+const SUBJECT_ORDER = ['국어', '수학', '바른생활', '슬기로운생활', '즐거운생활', '통합', '영어', '체육', '음악', '미술'];
+const INTEGRATED_UNITS = ['학교', '사람들', '우리나라', '탐험', '하루', '약속', '상상', '이야기'];
+const NONE = 'NONE';
+
+/* ===================== small utils ===================== */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+const nospace = (s) => clean(s).replace(/\s/g, '');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const fmtTime = (d) => new Date(d).toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); }
+const themeMeta = new Map(THEMES.map((t) => [t.key, t]));
+const extraThemes = new Map();
+function themeOf(key) {
+  if (key === NONE) return { key: NONE, ko: '미지정', en: 'Not mapped yet', h: 0, none: true };
+  return themeMeta.get(key) || extraThemes.get(key) || { key, ko: key, en: '', h: 0 };
+}
+function badge(key, cls = '') {
+  const t = themeOf(key);
+  if (t.none) return `<span class="badge none ${cls}">미지정</span>`;
+  return `<span class="badge ${cls}" style="--h:${t.h}" title="${esc(t.ko)} · ${esc(t.en)}">${esc(t.key)}</span>`;
+}
+let toastTimer;
+function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3200); }
+
+/* ===================== CSV / JSONP transport ===================== */
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', i = 0, inQ = false;
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  while (i < text.length) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i += 2; continue; } inQ = false; i++; continue; }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQ = true; i++; continue; }
+    if (c === ',') { row.push(field); field = ''; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+    field += c; i++;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((v) => v.trim() !== ''));
+}
+async function fetchCSV(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  const res = await fetch(`${url}${sep}_cb=${Date.now()}`, { cache: 'no-store', credentials: 'omit' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  if (/^\s*</.test(text)) throw new Error('CSV가 아니라 HTML이 돌아왔습니다 (시트 공개 설정을 확인하세요)');
+  const rows = parseCSV(text);
+  if (rows.length < 2) throw new Error('빈 데이터');
+  const [header, ...body] = rows;
+  return { header, rows: body };
+}
+function fetchJSONP() {
+  return new Promise((resolve, reject) => {
+    const cb = '__uoiSheet' + Date.now().toString(36);
+    const s = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); reject(new Error('JSONP 응답 시간 초과')); }, 15000);
+    const cleanup = () => { clearTimeout(timer); delete window[cb]; s.remove(); };
+    window[cb] = (resp) => {
+      cleanup();
+      if (!resp || resp.status !== 'ok' || !resp.table) return reject(new Error('JSONP 응답 오류'));
+      const header = resp.table.cols.map((c) => c.label || c.id);
+      const rows = resp.table.rows.map((r) => r.c.map((c) => (c == null ? '' : (c.f != null ? String(c.f) : (c.v == null ? '' : String(c.v))))));
+      resolve({ header, rows });
+    };
+    s.onerror = () => { cleanup(); reject(new Error('JSONP 스크립트를 불러오지 못했습니다')); };
+    s.src = `${CONFIG.gvizBase}&tqx=out:json;responseHandler:${cb}&_cb=${Date.now()}`;
+    document.head.appendChild(s);
+  });
+}
+async function loadRemote(settings) {
+  const isFile = location.protocol === 'file:';
+  const custom = settings.customUrl;
+  const mode = settings.transport;
+  const tryCSV = () => fetchCSV(custom || CONFIG.csvUrl);
+  if (custom || mode === 'csv') return { ...(await tryCSV()), via: 'csv' };
+  if (mode === 'jsonp' || (mode === 'auto' && isFile)) return { ...(await fetchJSONP()), via: 'jsonp' };
+  try { return { ...(await tryCSV()), via: 'csv' }; }
+  catch (e) { try { return { ...(await fetchJSONP()), via: 'jsonp' }; } catch (e2) { throw new Error(`${e.message} / ${e2.message}`); } }
+}
+
+/* ===================== normalization ===================== */
+function columnIndex(header) {
+  const h = header.map(nospace);
+  const find = (pred) => h.findIndex(pred);
+  return {
+    subject: find((x) => x.includes('교과')),
+    grade: find((x) => x.includes('학년')),
+    semester: find((x) => x.includes('학기')),
+    unit: find((x) => x.includes('단원')),
+    area: find((x) => x.includes('영역')),
+    standard: find((x) => x.includes('성취기준') && !x.includes('해설')),
+    theme: find((x) => x.includes('주제')),
+    explanation: find((x) => x.includes('해설')),
+  };
+}
+function normSemester(raw, grade) {
+  const s = clean(raw);
+  const nums = s.match(/\d+/g) || [];
+  if (nums.length >= 3) return `${+nums[1]}-${+nums[2]}`;      // 2026-01-02 → 1-2
+  if (nums.length === 2) return `${+nums[0]}-${+nums[1]}`;     // 1-2, 1/2, 1. 2
+  if (nums.length === 1 && grade) return `${+grade}-${+nums[0]}`;
+  return s;
+}
+function parseThemes(raw) {
+  const out = [];
+  for (let part of clean(raw).split(/[,;\n、|]+/)) {
+    part = part.trim(); if (!part) continue;
+    const ns = nospace(part), lo = part.toLowerCase();
+    let t = THEMES.find((x) => ns === nospace(x.ko) || ns.toUpperCase() === x.key || lo === x.en.toLowerCase())
+         || THEMES.find((x) => ns.includes(nospace(x.ko)) || lo.includes(x.en.toLowerCase()) || ns.toUpperCase().includes(`(${x.key})`));
+    if (t) { if (!out.includes(t.key)) out.push(t.key); continue; }
+    const key = 'X:' + ns;
+    if (!extraThemes.has(key)) extraThemes.set(key, { key, ko: part, en: '', h: 0, abbr: part.slice(0, 6) });
+    if (!out.includes(key)) out.push(key);
+  }
+  return out;
+}
+function subjectRank(s) { const i = SUBJECT_ORDER.indexOf(nospace(s)); return i < 0 ? 100 : i; }
+function unitRank(u) {
+  const s = clean(u);
+  if (/한글/.test(s)) return 0;
+  const m = s.match(/(\d+)\s*단원/); if (m) return +m[1] + (/중복/.test(s) ? 0.5 : 0);
+  const i = INTEGRATED_UNITS.findIndex((x) => s.startsWith(x)); if (i >= 0) return 100 + i;
+  return 500;
+}
+function codeRank(code) { return code.replace(/\d+/g, (d) => d.padStart(3, '0')); }
+
+function buildModel({ header, rows }) {
+  const ci = columnIndex(header);
+  if (ci.standard < 0) throw new Error('「성취기준」 열을 찾지 못했습니다. 시트 머리글을 확인하세요.');
+  const get = (r, i) => (i < 0 ? '' : clean(r[i]));
+  const placements = [];
+  rows.forEach((r, i) => {
+    const raw = get(r, ci.standard); if (!raw) return;
+    const m = raw.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
+    const codeLabel = m ? clean(m[1]) : '';
+    const text = m ? clean(m[2]) : raw;
+    const grade = get(r, ci.grade);
+    const expl = get(r, ci.explanation);
+    placements.push({
+      row: i + 2, subject: get(r, ci.subject) || '(교과 없음)', grade,
+      semester: normSemester(get(r, ci.semester), grade),
+      unit: get(r, ci.unit) || '(단원 없음)', area: get(r, ci.area),
+      code: codeLabel || ('#' + hashStr(text)), codeLabel, text,
+      themes: parseThemes(get(r, ci.theme)),
+      explanation: (!expl || /^해당\s*없음\.?$/.test(expl)) ? '' : expl,
+    });
+  });
+  const standards = new Map();
+  for (const p of placements) {
+    let s = standards.get(p.code);
+    if (!s) { s = { code: p.code, codeLabel: p.codeLabel, text: p.text, subject: p.subject, area: p.area, explanation: '', placements: [], themes: new Set() }; standards.set(p.code, s); }
+    if (!s.explanation && p.explanation) s.explanation = p.explanation;
+    if (!s.area && p.area) s.area = p.area;
+    s.placements.push(p); p.themes.forEach((t) => s.themes.add(t));
+  }
+  const sortedStd = [...standards.values()].sort((a, b) => subjectRank(a.subject) - subjectRank(b.subject) || codeRank(a.codeLabel || a.text).localeCompare(codeRank(b.codeLabel || b.text), 'ko'));
+  const subjects = [...new Set(placements.map((p) => p.subject))].sort((a, b) => subjectRank(a) - subjectRank(b) || a.localeCompare(b, 'ko'));
+  const semesters = [...new Set(placements.map((p) => p.semester))].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
+  const areasBySubject = new Map();
+  for (const p of placements) { if (!p.area) continue; if (!areasBySubject.has(p.subject)) areasBySubject.set(p.subject, new Set()); areasBySubject.get(p.subject).add(p.area); }
+  return { placements, standards, sortedStd, subjects, semesters, areasBySubject };
+}
+
+/* ===================== state ===================== */
+const settings = Object.assign({ customUrl: '', transport: 'auto', pollSeconds: CONFIG.pollSeconds }, store.get('uoi.settings', {}));
+const filter = Object.assign({ q: '', subjects: [], semesters: [], area: '', themes: [] }, store.get('uoi.filters', {}));
+let view = (location.hash.replace('#', '') || store.get('uoi.view', 'unit'));
+if (!['unit', 'theme', 'standard', 'summary'].includes(view)) view = 'unit';
+let model = null, dataHash = '', lastSync = null, lastVia = '', pollTimer = null, loading = false, lastAttempt = 0;
+let lastFocus = null;
+
+/* ===================== filter rail ===================== */
+function buildRail() {
+  const subj = $('#gSubject'); subj.querySelectorAll('.chip').forEach((c) => c.remove());
+  for (const s of model.subjects) subj.insertAdjacentHTML('beforeend', `<button class="chip" data-f="subjects" data-v="${esc(s)}" aria-pressed="${filter.subjects.includes(s)}">${esc(s)}</button>`);
+  const sem = $('#gSemester'); sem.querySelectorAll('.chip').forEach((c) => c.remove());
+  for (const s of model.semesters) sem.insertAdjacentHTML('beforeend', `<button class="chip num" data-f="semesters" data-v="${esc(s)}" aria-pressed="${filter.semesters.includes(s)}">${esc(s)}</button>`);
+  const th = $('#gTheme'); th.querySelectorAll('.chip').forEach((c) => c.remove());
+  const keys = [...THEMES.map((t) => t.key), ...extraThemes.keys(), NONE];
+  for (const k of keys) {
+    const t = themeOf(k);
+    th.insertAdjacentHTML('beforeend', `<button class="chip ${t.none ? 'none' : ''}" data-f="themes" data-v="${esc(k)}" aria-pressed="${filter.themes.includes(k)}" title="${esc(t.ko)}${t.en ? ' · ' + esc(t.en) : ''}" style="--h:${t.h}"><span class="sw"></span>${esc(t.none ? '미지정' : (t.abbr || t.key))}</button>`);
+  }
+  buildAreaSelect();
+  $('#q').value = filter.q; $('#qClear').hidden = !filter.q;
+  updateResetState();
+}
+function buildAreaSelect() {
+  const sel = $('#area');
+  const active = filter.subjects.length ? filter.subjects : model.subjects;
+  const seen = new Set(); let html = '<option value="">전체</option>';
+  for (const s of active) {
+    const areas = [...(model.areasBySubject.get(s) || [])].sort((a, b) => a.localeCompare(b, 'ko'));
+    if (!areas.length) continue;
+    html += `<optgroup label="${esc(s)}">` + areas.map((a) => { seen.add(a); return `<option value="${esc(a)}">${esc(a)}</option>`; }).join('') + '</optgroup>';
+  }
+  sel.innerHTML = html;
+  if (filter.area && !seen.has(filter.area)) filter.area = '';
+  sel.value = filter.area;
+}
+function activeFilterCount() { return (filter.q ? 1 : 0) + filter.subjects.length + filter.semesters.length + (filter.area ? 1 : 0) + filter.themes.length; }
+function updateResetState() {
+  const n = activeFilterCount();
+  $('#resetBtn').disabled = n === 0;
+  $('#filterCount').textContent = n ? n : '';
+}
+function toggleIn(arr, v) { const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); }
+$('#groups').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip[data-f]'); if (!chip) return;
+  toggleIn(filter[chip.dataset.f], chip.dataset.v);
+  chip.setAttribute('aria-pressed', String(filter[chip.dataset.f].includes(chip.dataset.v)));
+  if (chip.dataset.f === 'subjects') buildAreaSelect();
+  onFilterChange();
+});
+$('#area').addEventListener('change', (e) => { filter.area = e.target.value; onFilterChange(); });
+let qTimer;
+$('#q').addEventListener('input', (e) => { $('#qClear').hidden = !e.target.value; clearTimeout(qTimer); qTimer = setTimeout(() => { filter.q = clean(e.target.value); onFilterChange(); }, 160); });
+$('#qClear').addEventListener('click', () => { $('#q').value = ''; $('#qClear').hidden = true; filter.q = ''; onFilterChange(); $('#q').focus(); });
+$('#resetBtn').addEventListener('click', () => { Object.assign(filter, { q: '', subjects: [], semesters: [], area: '', themes: [] }); buildRail(); onFilterChange(); });
+$('#filterToggle').addEventListener('click', () => { const r = $('#rail'); const open = r.classList.toggle('open'); $('#filterToggle').setAttribute('aria-expanded', String(open)); });
+function onFilterChange() { store.set('uoi.filters', filter); updateResetState(); render(); }
+
+/* ===================== filtering ===================== */
+function matchQ(p, q) {
+  if (!q) return true;
+  const hay = [p.codeLabel, p.text, p.explanation, p.unit, p.area, p.subject, ...p.themes.map((t) => themeOf(t).ko + ' ' + themeOf(t).key)].join(' ').toLowerCase();
+  return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w) || hay.replace(/\s/g, '').includes(w));
+}
+function matchPlacement(p) {
+  if (filter.subjects.length && !filter.subjects.includes(p.subject)) return false;
+  if (filter.semesters.length && !filter.semesters.includes(p.semester)) return false;
+  if (filter.area && p.area !== filter.area) return false;
+  if (filter.themes.length) {
+    const hit = (p.themes.length === 0 && filter.themes.includes(NONE)) || p.themes.some((t) => filter.themes.includes(t));
+    if (!hit) return false;
+  }
+  return matchQ(p, filter.q);
+}
+function filtered() { return model.placements.filter(matchPlacement); }
+
+/* ===================== rendering ===================== */
+function setView(v, push = true) {
+  view = v; store.set('uoi.view', v);
+  if (push && location.hash !== '#' + v) history.replaceState(null, '', '#' + v);
+  document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.view === v)));
+  document.querySelectorAll('main > section').forEach((s) => { s.hidden = s.dataset.view !== v; });
+  render();
+}
+$('#tabs').addEventListener('click', (e) => { const t = e.target.closest('.tab'); if (t) setView(t.dataset.view); });
+window.addEventListener('hashchange', () => { const v = location.hash.replace('#', ''); if (['unit', 'theme', 'standard', 'summary'].includes(v) && v !== view) setView(v, false); });
+
+function render() {
+  if (!model) return;
+  const ps = filtered();
+  const codes = new Set(ps.map((p) => p.code));
+  $('#nUnit').textContent = new Set(ps.map((p) => `${p.subject}|${p.semester}|${p.unit}`)).size;
+  $('#nTheme').textContent = new Set(ps.flatMap((p) => p.themes)).size;
+  $('#nStandard').textContent = codes.size;
+  const n = activeFilterCount();
+  $('#statusLine').innerHTML = n
+    ? `필터 적용 중 · 성취기준 <b class="num">${codes.size}</b>개 / 매핑 행 <b class="num">${ps.length}</b>개 (전체 ${model.standards.size}개 / ${model.placements.length}행)`
+    : `성취기준 <b class="num">${model.standards.size}</b>개 · 매핑 행 <b class="num">${model.placements.length}</b>행 · 주제 미지정 성취기준 <b class="num">${[...model.standards.values()].filter((s) => s.themes.size === 0).length}</b>개`;
+  if (view === 'unit') renderUnit(ps);
+  else if (view === 'theme') renderTheme(ps);
+  else if (view === 'standard') renderStandard(ps, codes);
+  else renderSummary(ps);
+}
+function emptyHtml() { return `<div class="empty"><strong>조건에 맞는 성취기준이 없습니다</strong>검색어나 필터를 줄여 보세요.</div>`; }
+
+function renderUnit(ps) {
+  const el = $('#viewUnit');
+  if (!ps.length) { el.innerHTML = emptyHtml(); return; }
+  const bySubj = new Map();
+  for (const p of ps) {
+    if (!bySubj.has(p.subject)) bySubj.set(p.subject, new Map());
+    const bySem = bySubj.get(p.subject);
+    if (!bySem.has(p.semester)) bySem.set(p.semester, new Map());
+    const byUnit = bySem.get(p.semester);
+    if (!byUnit.has(p.unit)) byUnit.set(p.unit, []);
+    byUnit.get(p.unit).push(p);
+  }
+  let html = '';
+  for (const subject of model.subjects) {
+    const bySem = bySubj.get(subject); if (!bySem) continue;
+    const all = [...bySem.values()].flatMap((m) => [...m.values()].flat());
+    html += `<section class="subject"><h2>${esc(subject)} <span class="meta">성취기준 ${new Set(all.map((p) => p.code)).size}개 · ${all.length}행</span></h2>`;
+    for (const sem of [...bySem.keys()].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }))) {
+      const byUnit = bySem.get(sem);
+      const units = [...byUnit.keys()].sort((a, b) => unitRank(a) - unitRank(b) || a.localeCompare(b, 'ko', { numeric: true }));
+      html += `<div class="sem"><h3><span class="num">${esc(sem)}</span> ${semLabel(sem)}</h3><div class="units">`;
+      for (const u of units) {
+        const list = byUnit.get(u);
+        const themes = [...new Set(list.flatMap((p) => p.themes))];
+        html += `<article class="unit"><header><h4>${esc(u)}</h4><span class="n num">${list.length}</span><span class="themes">${themes.map((t) => badge(t)).join('')}</span></header>`;
+        for (const p of list) {
+          html += `<button class="std" data-code="${esc(p.code)}"><span class="row"><span class="code">${esc(p.codeLabel || '—')}</span><span class="area">${esc(p.area)}</span><span class="sp"></span>${p.themes.length ? p.themes.map((t) => badge(t)).join('') : badge(NONE)}</span><span class="txt">${esc(p.text)}</span></button>`;
+        }
+        html += `</article>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</section>`;
+  }
+  el.innerHTML = html;
+}
+function semLabel(sem) { const m = sem.match(/^(\d+)-(\d+)$/); return m ? `<span>${m[1]}학년 ${m[2]}학기</span>` : ''; }
+
+function renderTheme(ps) {
+  const el = $('#viewTheme');
+  if (!ps.length) { el.innerHTML = emptyHtml(); return; }
+  const keys = [...THEMES.map((t) => t.key), ...extraThemes.keys(), NONE];
+  const showNone = !filter.themes.length || filter.themes.includes(NONE);
+  let html = '<div class="board">';
+  for (const k of keys) {
+    if (k === NONE && !showNone) continue;
+    if (filter.themes.length && !filter.themes.includes(k)) continue;
+    const t = themeOf(k);
+    const list = ps.filter((p) => (k === NONE ? p.themes.length === 0 : p.themes.includes(k)));
+    const byCode = new Map();
+    for (const p of list) { if (!byCode.has(p.code)) byCode.set(p.code, []); byCode.get(p.code).push(p); }
+    const codes = [...byCode.keys()].sort((a, b) => { const A = model.standards.get(a), B = model.standards.get(b); return subjectRank(A.subject) - subjectRank(B.subject) || codeRank(A.codeLabel || A.text).localeCompare(codeRank(B.codeLabel || B.text), 'ko'); });
+    html += `<section class="col ${t.none ? 'none' : ''}" style="--h:${t.h}"><header><span class="abbr">${esc(t.none ? 'UNMAPPED' : (t.abbr || t.key))}</span><span class="ko">${esc(t.ko)} <span class="n num">${codes.length}개 · ${list.length}행</span></span>${t.en ? `<span class="en">${esc(t.en)}</span>` : ''}</header>`;
+    if (!codes.length) html += `<div class="tcard" style="color:var(--fg-3)">해당 없음</div>`;
+    for (const c of codes) {
+      const s = model.standards.get(c); const pl = byCode.get(c).sort((a, b) => a.semester.localeCompare(b.semester, 'ko', { numeric: true }) || unitRank(a.unit) - unitRank(b.unit));
+      html += `<button class="tcard" data-code="${esc(c)}"><span class="row"><span class="code">${esc(s.codeLabel || '—')}</span><span class="subjtag">${esc(s.subject)}${s.area ? ' · ' + esc(s.area) : ''}</span><span class="sp"></span></span><span class="txt">${esc(s.text)}</span><span class="places">${pl.map((p) => `<span class="place"><span class="num">${esc(p.semester)}</span> ${esc(p.unit)}</span>`).join('')}</span></button>`;
+    }
+    html += `</section>`;
+  }
+  el.innerHTML = html + '</div>';
+}
+
+function renderStandard(ps, codes) {
+  const el = $('#viewStandard');
+  if (!codes.size) { el.innerHTML = emptyHtml(); return; }
+  const sems = model.semesters;
+  let html = `<div class="tablewrap"><table><thead><tr><th>교과</th><th>영역</th><th>코드</th><th>성취기준</th>${sems.map((s) => `<th class="num">${esc(s)} 주제 · 단원</th>`).join('')}<th>해설</th></tr></thead><tbody>`;
+  for (const s of model.sortedStd) {
+    if (!codes.has(s.code)) continue;
+    const mine = ps.filter((p) => p.code === s.code);
+    const unmapped = s.themes.size === 0;
+    html += `<tr data-code="${esc(s.code)}" class="${unmapped ? 'unmapped' : ''}" tabindex="0"><td class="subj">${esc(s.subject)}</td><td class="subj">${esc(s.area)}</td><td class="codecell"><span class="code">${esc(s.codeLabel || '—')}</span></td><td class="textcell">${esc(s.text)}</td>`;
+    for (const sem of sems) {
+      const pl = mine.filter((p) => p.semester === sem).sort((a, b) => unitRank(a.unit) - unitRank(b.unit));
+      html += `<td class="semcell">${pl.map((p) => `<span class="pl">${p.themes.length ? p.themes.map((t) => badge(t)).join('') : badge(NONE)}<span>${esc(p.unit)}</span></span>`).join('') || '<span class="pl" style="color:var(--fg-3)">—</span>'}</td>`;
+    }
+    html += `<td class="expl ${s.explanation ? 'yes' : ''}">${s.explanation ? '있음' : '—'}</td></tr>`;
+  }
+  el.innerHTML = html + '</tbody></table></div>';
+}
+
+function renderSummary(ps) {
+  const el = $('#viewSummary');
+  const stdList = [...new Set(ps.map((p) => p.code))].map((c) => model.standards.get(c));
+  const keys = [...THEMES.map((t) => t.key), ...extraThemes.keys()];
+  const subjects = model.subjects.filter((s) => ps.some((p) => p.subject === s));
+  // subject × theme: unique standards, based on filtered placements
+  const cell = (subj, k) => new Set(ps.filter((p) => p.subject === subj && (k === NONE ? p.themes.length === 0 : p.themes.includes(k))).map((p) => p.code)).size;
+  const col = (k) => new Set(ps.filter((p) => (k === NONE ? p.themes.length === 0 : p.themes.includes(k))).map((p) => p.code)).size;
+  let max = 1; for (const s of subjects) for (const k of [...keys, NONE]) max = Math.max(max, cell(s, k));
+  const stdUnmapped = stdList.filter((s) => s.themes.size === 0);
+  const mappedRows = ps.filter((p) => p.themes.length).length;
+  let html = `<div class="summary">
+    <div class="stats"><span><b class="num">${stdList.length}</b>성취기준</span><span><b class="num">${ps.length}</b>매핑 행</span><span><b class="num">${mappedRows}</b>주제 지정 행</span><span><b class="num">${stdUnmapped.length}</b>주제 미지정 성취기준</span></div>
+    <div><h3>교과 × 초학문적 주제 (성취기준 수)</h3><div class="tablewrap matrix"><table><thead><tr><th>교과</th>${keys.map((k) => { const t = themeOf(k); return `<th><span class="abbr" style="color:hsl(${t.h} var(--bf-s) var(--bf-l))">${esc(t.abbr || t.key)}</span><span class="ko">${esc(t.ko)}</span></th>`; }).join('')}<th><span class="abbr">미지정</span><span class="ko">빈 행 있음</span></th><th>합계</th></tr></thead><tbody>`;
+  for (const s of subjects) {
+    html += `<tr><td>${esc(s)}</td>`;
+    for (const k of [...keys, NONE]) { const v = cell(s, k); const t = themeOf(k); html += `<td class="v ${v ? '' : 'zero'}" style="--h:${t.h};--a:${k === NONE ? 0 : (0.08 + 0.5 * v / max).toFixed(2)}">${v || '·'}</td>`; }
+    html += `<td class="total num">${new Set(ps.filter((p) => p.subject === s).map((p) => p.code)).size}</td></tr>`;
+  }
+  html += `<tr class="total"><td>합계</td>${[...keys, NONE].map((k) => `<td class="num">${col(k)}</td>`).join('')}<td class="num">${stdList.length}</td></tr></tbody></table></div><div class="note">한 성취기준이 여러 단원에서 다른 주제로 쓰이면 각 주제 열에 모두 세어집니다. 「미지정」 열은 주제가 비어 있는 행이 하나라도 있는 성취기준 수이고(다른 단원에서 주제가 있어도 포함), 위의 「주제 미지정 성취기준」은 어느 단원에서도 주제가 없는 성취기준 수입니다.</div></div>`;
+  // semester × theme (rows)
+  html += `<div><h3>학기 × 초학문적 주제 (매핑 행 수)</h3><div class="tablewrap matrix"><table><thead><tr><th>학기</th>${keys.map((k) => `<th>${esc(themeOf(k).abbr || k)}</th>`).join('')}<th>미지정</th><th>합계</th></tr></thead><tbody>`;
+  for (const sem of model.semesters) {
+    const mine = ps.filter((p) => p.semester === sem); if (!mine.length) continue;
+    html += `<tr><td class="num">${esc(sem)}</td>${keys.map((k) => { const v = mine.filter((p) => p.themes.includes(k)).length; const t = themeOf(k); return `<td class="v ${v ? '' : 'zero'}" style="--h:${t.h};--a:${(0.08 + 0.4 * v / Math.max(1, mine.length / 2)).toFixed(2)}">${v || '·'}</td>`; }).join('')}<td class="v zero">${mine.filter((p) => !p.themes.length).length || '·'}</td><td class="total num">${mine.length}</td></tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+  // unmapped list
+  html += `<div><h3>주제 미지정 성취기준 <span class="num" style="color:var(--fg-3);font-weight:400">${stdUnmapped.length}개</span></h3>`;
+  if (!stdUnmapped.length) html += `<div class="note">모든 성취기준에 주제가 지정되어 있습니다.</div>`;
+  else {
+    html += `<div class="unmapped-list">`;
+    for (const s of subjects) {
+      const mine = stdUnmapped.filter((x) => x.subject === s); if (!mine.length) continue;
+      html += `<div class="grp"><span class="subj">${esc(s)}</span>${mine.map((x) => `<button class="pill" data-code="${esc(x.code)}"><span class="code">${esc(x.codeLabel || '—')}</span><span class="t">${esc(x.text)}</span></button>`).join('')}</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div></div>`;
+  el.innerHTML = html;
+}
+
+/* ===================== detail drawer ===================== */
+const detail = $('#detail');
+document.querySelector('main').addEventListener('click', (e) => { const t = e.target.closest('[data-code]'); if (t) openDetail(t.dataset.code); });
+document.querySelector('main').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('tr[data-code]')) openDetail(e.target.dataset.code); });
+function openDetail(code) {
+  const s = model.standards.get(code); if (!s) return;
+  lastFocus = document.activeElement;
+  $('#dCode').textContent = s.codeLabel || '코드 없음';
+  $('#dSubj').textContent = `${s.subject}${s.area ? ' · ' + s.area : ''}`;
+  const pl = [...s.placements].sort((a, b) => a.semester.localeCompare(b.semester, 'ko', { numeric: true }) || unitRank(a.unit) - unitRank(b.unit));
+  const themes = [...s.themes];
+  $('#dBody').innerHTML = `
+    <div class="text">${esc(s.text)}</div>
+    <div><h3>매핑된 주제</h3><div class="themesum">${themes.length ? themes.map((t) => `${badge(t, 'lg')}<span style="font-size:12.5px;color:var(--fg-2);align-self:center;margin-right:8px">${esc(themeOf(t).ko)}</span>`).join('') : badge(NONE, 'lg')}</div></div>
+    <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${p.themes.length ? p.themes.map((t) => badge(t)).join('') : badge(NONE)}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
+    <div><h3>성취기준 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div>`;
+  if (!detail.open) detail.showModal();
+  $('#dBody').scrollTop = 0;
+  $('#dClose').focus();
+}
+function sheetRowUrl(row) { return `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}&range=F${row}`; }
+$('#dClose').addEventListener('click', () => detail.close());
+detail.addEventListener('click', (e) => { if (e.target === detail) detail.close(); });
+detail.addEventListener('close', () => { if (lastFocus && lastFocus.focus) lastFocus.focus(); });
+
+/* ===================== settings ===================== */
+const sdlg = $('#settings');
+$('#sheetLink').href = CONFIG.sheetUrl;
+$('#sDefaultUrl').textContent = CONFIG.csvUrl;
+$('#settingsBtn').addEventListener('click', () => {
+  $('#sUrl').value = settings.customUrl; $('#sTransport').value = settings.transport; $('#sPoll').value = String(settings.pollSeconds);
+  sdlg.showModal();
+});
+$('#sCancel').addEventListener('click', () => sdlg.close());
+sdlg.addEventListener('click', (e) => { if (e.target === sdlg) sdlg.close(); });
+$('#settingsForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  settings.customUrl = clean($('#sUrl').value); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
+  store.set('uoi.settings', settings); sdlg.close(); schedulePoll(); sync(true);
+});
+$('#sClearCache').addEventListener('click', () => { store.del('uoi.cache'); toast('캐시를 지웠습니다'); });
+
+/* ===================== sync loop ===================== */
+function setSync(state, text) { const el = $('#sync'); el.className = 'sync ' + state; $('#syncText').textContent = text; $('#refreshBtn').classList.toggle('spin', state === 'busy'); }
+function applyData(data, { fromCache = false } = {}) {
+  const hash = hashStr(JSON.stringify([data.header, data.rows]));
+  const changed = hash !== dataHash;
+  if (changed) {
+    extraThemes.clear();
+    const m = buildModel(data);
+    model = m; dataHash = hash;
+    buildRail(); setView(view, false);
+  }
+  return changed;
+}
+async function sync(manual = false) {
+  if (loading) return; loading = true; lastAttempt = Date.now();
+  setSync('busy', manual ? '새로고침 중…' : (lastSync ? `동기화 ${fmtTime(lastSync)} · 확인 중` : '불러오는 중…'));
+  try {
+    const data = await loadRemote(settings);
+    const hadData = !!model;
+    const changed = applyData(data);
+    lastSync = Date.now(); lastVia = data.via;
+    store.set('uoi.cache', { data: { header: data.header, rows: data.rows }, at: lastSync });
+    setSync('ok', `동기화 ${fmtTime(lastSync)} · ${data.via === 'jsonp' ? 'JSONP' : 'CSV'}`);
+    if (changed && hadData) toast(`시트 변경 사항을 반영했습니다 (${fmtTime(lastSync)})`);
+    else if (manual) toast(changed ? '불러왔습니다' : '변경 사항이 없습니다');
+  } catch (err) {
+    console.error(err);
+    const cached = store.get('uoi.cache', null);
+    if (!model && cached) { try { applyData(cached.data); } catch {} }
+    setSync('err', model ? `연결 실패 · ${cached ? fmtTime(cached.at) + ' 캐시 표시' : '이전 데이터 표시'}` : '불러오지 못했습니다');
+    if (!model) {
+      $('#statusLine').innerHTML = '';
+      $('#viewUnit').innerHTML = `<div class="empty"><strong>시트를 읽지 못했습니다</strong>${esc(err.message)}<br><br>시트가 「링크가 있는 모든 사용자」에게 공개되어 있는지, 또는 설정에서 CSV 주소가 맞는지 확인하세요.<br><br><button class="btn primary" id="retryBtn">다시 시도</button></div>`;
+      $('#retryBtn').addEventListener('click', () => sync(true));
+    } else if (manual) toast('시트에 연결하지 못했습니다: ' + err.message);
+  } finally { loading = false; }
+}
+function schedulePoll() {
+  clearInterval(pollTimer); pollTimer = null;
+  if (settings.pollSeconds > 0) pollTimer = setInterval(() => { if (document.visibilityState === 'visible') sync(); }, settings.pollSeconds * 1000);
+}
+$('#refreshBtn').addEventListener('click', () => sync(true));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastAttempt > 10000) sync(); });
+window.addEventListener('focus', () => { if (Date.now() - lastAttempt > 10000) sync(); });
+
+/* ===================== boot ===================== */
+(function boot() {
+  const cached = store.get('uoi.cache', null);
+  if (cached && cached.data) {
+    try { applyData(cached.data); setSync('busy', `${fmtTime(cached.at)} 캐시 표시 · 최신 확인 중`); } catch (e) { console.warn('cache ignored', e); }
+  }
+  setView(view, false);
+  schedulePoll();
+  sync();
+})();
+})();
+</script>
+</body>
+</html>
