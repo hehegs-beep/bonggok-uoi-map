@@ -109,6 +109,8 @@ ul { list-style: none; margin: 0; padding: 0; }
 .search svg { position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--fg-3); pointer-events: none; }
 .search .clear { position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border: 0; background: none; color: var(--fg-3); border-radius: 6px; }
 .search .clear:hover { background: var(--surface-2); color: var(--fg); }
+.search input::-webkit-search-cancel-button, .search input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
+.actions { display: flex; gap: 8px; align-items: center; }
 .filtertoggle { display: none; }
 .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, max-content)); gap: 6px 22px; padding: 10px 0 8px; }
 .group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
@@ -137,7 +139,11 @@ select.area { height: 26px; border: 1px solid var(--line-2); border-radius: 8px;
 
 /* ---------- content ---------- */
 main { padding: 18px 20px 60px; max-width: 1480px; margin: 0 auto; }
-.status-line { color: var(--fg-2); font-size: 12.5px; margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.status-line { color: var(--fg-2); font-size: 12.5px; margin-bottom: 14px; display: flex; gap: 4px 12px; flex-wrap: wrap; align-items: center; }
+.status-line > span { white-space: nowrap; }
+.x { --bd-s: 0%; --bf-s: 0%; --bb-s: 0%; }
+.col.x > header { border-left-color: var(--fg-3); }
+.chip.x .sw { background: var(--fg-3); }
 .empty { padding: 50px 20px; text-align: center; color: var(--fg-2); border: 1px dashed var(--line-2); border-radius: var(--radius); }
 .empty strong { display: block; color: var(--fg); font-size: 15px; margin-bottom: 6px; }
 
@@ -241,14 +247,14 @@ dialog { border: 0; padding: 0; background: var(--surface); color: var(--fg); bo
 dialog::backdrop { background: rgba(10, 14, 12, .45); }
 dialog.drawer {
   margin: 0 0 0 auto; width: min(520px, 100%); height: 100%; max-height: 100%; max-width: 100%;
-  border-left: 1px solid var(--line); display: flex; flex-direction: column;
+  border-left: 1px solid var(--line); flex-direction: column;
 }
-dialog.drawer[open] { animation: slidein .22s ease-out; }
+dialog.drawer[open] { display: flex; animation: slidein .22s ease-out; }
 @keyframes slidein { from { transform: translateX(24px); opacity: 0; } }
 .dhead { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
 .dhead .code { font-size: 13px; padding: 3px 8px; }
 .dhead .close { margin-left: auto; }
-.dbody { padding: 16px 18px 28px; overflow: auto; display: grid; gap: 18px; align-content: start; }
+.dbody { flex: 1; min-height: 0; padding: 16px 18px 28px; overflow: auto; display: grid; gap: 18px; align-content: start; }
 .dbody .text { font-size: 16.5px; line-height: 1.5; font-weight: 500; }
 .dbody .kv { font-size: 12.5px; color: var(--fg-2); display: flex; gap: 12px; flex-wrap: wrap; }
 .dbody h3 { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
@@ -288,6 +294,12 @@ dialog.modal { width: min(560px, calc(100% - 32px)); border-radius: 12px; border
 @media (max-width: 720px) {
   .appbar, .rail, main { padding-left: 16px; padding-right: 16px; }
   .brand .sub { display: none; }
+  .brand { flex: 1 1 100%; }
+  .iconbtn > span { display: none; }
+  .iconbtn { padding: 0 8px; }
+  .rail-top { flex-wrap: nowrap; }
+  .search { flex: 1 1 120px; }
+  .reset { white-space: nowrap; }
   .filtertoggle { display: inline-flex; }
   .groups { display: none; }
   .rail.open .groups { display: grid; grid-template-columns: 1fr; }
@@ -312,6 +324,7 @@ dialog.modal { width: min(560px, calc(100% - 32px)); border-radius: 12px; border
   <div class="sync" id="sync" title="데이터 출처: 구글 시트 「1학년 성취기준」 탭">
     <span class="dot"></span><span id="syncText">불러오는 중…</span>
   </div>
+  <div class="actions">
   <button class="iconbtn" id="refreshBtn" title="지금 새로고침">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
     <span>새로고침</span>
@@ -323,6 +336,7 @@ dialog.modal { width: min(560px, calc(100% - 32px)); border-radius: 12px; border
   <button class="iconbtn" id="settingsBtn" title="설정">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
   </button>
+  </div>
 </header>
 
 <div class="rail" id="rail">
@@ -443,6 +457,7 @@ const store = {
 const fmtTime = (d) => new Date(d).toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); }
 const themeMeta = new Map(THEMES.map((t) => [t.key, t]));
+const isExtra = (key) => typeof key === 'string' && key.startsWith('X:');
 const extraThemes = new Map();
 function themeOf(key) {
   if (key === NONE) return { key: NONE, ko: '미지정', en: 'Not mapped yet', h: 0, none: true };
@@ -451,7 +466,8 @@ function themeOf(key) {
 function badge(key, cls = '') {
   const t = themeOf(key);
   if (t.none) return `<span class="badge none ${cls}">미지정</span>`;
-  return `<span class="badge ${cls}" style="--h:${t.h}" title="${esc(t.ko)} · ${esc(t.en)}">${esc(t.key)}</span>`;
+  const x = isExtra(key) ? ' x' : '';
+  return `<span class="badge ${cls}${x}" style="--h:${t.h}" title="${esc(t.ko)}${t.en ? ' · ' + esc(t.en) : ''}">${esc(t.abbr || t.key)}</span>`;
 }
 let toastTimer;
 function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3200); }
@@ -609,6 +625,11 @@ let lastFocus = null;
 
 /* ===================== filter rail ===================== */
 function buildRail() {
+  // drop remembered filter values that no longer exist in the sheet
+  const themeKeys = new Set([...THEMES.map((t) => t.key), ...extraThemes.keys(), NONE]);
+  filter.subjects = filter.subjects.filter((s) => model.subjects.includes(s));
+  filter.semesters = filter.semesters.filter((s) => model.semesters.includes(s));
+  filter.themes = filter.themes.filter((k) => themeKeys.has(k));
   const subj = $('#gSubject'); subj.querySelectorAll('.chip').forEach((c) => c.remove());
   for (const s of model.subjects) subj.insertAdjacentHTML('beforeend', `<button class="chip" data-f="subjects" data-v="${esc(s)}" aria-pressed="${filter.subjects.includes(s)}">${esc(s)}</button>`);
   const sem = $('#gSemester'); sem.querySelectorAll('.chip').forEach((c) => c.remove());
@@ -617,7 +638,7 @@ function buildRail() {
   const keys = [...THEMES.map((t) => t.key), ...extraThemes.keys(), NONE];
   for (const k of keys) {
     const t = themeOf(k);
-    th.insertAdjacentHTML('beforeend', `<button class="chip ${t.none ? 'none' : ''}" data-f="themes" data-v="${esc(k)}" aria-pressed="${filter.themes.includes(k)}" title="${esc(t.ko)}${t.en ? ' · ' + esc(t.en) : ''}" style="--h:${t.h}"><span class="sw"></span>${esc(t.none ? '미지정' : (t.abbr || t.key))}</button>`);
+    th.insertAdjacentHTML('beforeend', `<button class="chip ${t.none ? 'none' : ''}${isExtra(k) ? ' x' : ''}" data-f="themes" data-v="${esc(k)}" aria-pressed="${filter.themes.includes(k)}" title="${esc(t.ko)}${t.en ? ' · ' + esc(t.en) : ''}" style="--h:${t.h}"><span class="sw"></span>${esc(t.none ? '미지정' : (t.abbr || t.key))}</button>`);
   }
   buildAreaSelect();
   $('#q').value = filter.q; $('#qClear').hidden = !filter.q;
@@ -696,8 +717,8 @@ function render() {
   $('#nStandard').textContent = codes.size;
   const n = activeFilterCount();
   $('#statusLine').innerHTML = n
-    ? `필터 적용 중 · 성취기준 <b class="num">${codes.size}</b>개 / 매핑 행 <b class="num">${ps.length}</b>개 (전체 ${model.standards.size}개 / ${model.placements.length}행)`
-    : `성취기준 <b class="num">${model.standards.size}</b>개 · 매핑 행 <b class="num">${model.placements.length}</b>행 · 주제 미지정 성취기준 <b class="num">${[...model.standards.values()].filter((s) => s.themes.size === 0).length}</b>개`;
+    ? `<span>필터 적용 중</span><span>성취기준 <b class="num">${codes.size}</b>개</span><span>매핑 행 <b class="num">${ps.length}</b>행</span><span>(전체 ${model.standards.size}개 / ${model.placements.length}행)</span>`
+    : `<span>성취기준 <b class="num">${model.standards.size}</b>개</span><span>매핑 행 <b class="num">${model.placements.length}</b>행</span><span>주제 미지정 성취기준 <b class="num">${[...model.standards.values()].filter((s) => s.themes.size === 0).length}</b>개</span>`;
   if (view === 'unit') renderUnit(ps);
   else if (view === 'theme') renderTheme(ps);
   else if (view === 'standard') renderStandard(ps, codes);
@@ -757,7 +778,7 @@ function renderTheme(ps) {
     const byCode = new Map();
     for (const p of list) { if (!byCode.has(p.code)) byCode.set(p.code, []); byCode.get(p.code).push(p); }
     const codes = [...byCode.keys()].sort((a, b) => { const A = model.standards.get(a), B = model.standards.get(b); return subjectRank(A.subject) - subjectRank(B.subject) || codeRank(A.codeLabel || A.text).localeCompare(codeRank(B.codeLabel || B.text), 'ko'); });
-    html += `<section class="col ${t.none ? 'none' : ''}" style="--h:${t.h}"><header><span class="abbr">${esc(t.none ? 'UNMAPPED' : (t.abbr || t.key))}</span><span class="ko">${esc(t.ko)} <span class="n num">${codes.length}개 · ${list.length}행</span></span>${t.en ? `<span class="en">${esc(t.en)}</span>` : ''}</header>`;
+    html += `<section class="col ${t.none ? 'none' : ''}${isExtra(k) ? ' x' : ''}" style="--h:${t.h}"><header><span class="abbr">${esc(t.none ? 'UNMAPPED' : (t.abbr || t.key))}</span><span class="ko">${esc(t.ko)} <span class="n num">${codes.length}개 · ${list.length}행</span></span>${t.en ? `<span class="en">${esc(t.en)}</span>` : ''}</header>`;
     if (!codes.length) html += `<div class="tcard" style="color:var(--fg-3)">해당 없음</div>`;
     for (const c of codes) {
       const s = model.standards.get(c); const pl = byCode.get(c).sort((a, b) => a.semester.localeCompare(b.semester, 'ko', { numeric: true }) || unitRank(a.unit) - unitRank(b.unit));
@@ -811,7 +832,7 @@ function renderSummary(ps) {
   html += `<div><h3>학기 × 초학문적 주제 (매핑 행 수)</h3><div class="tablewrap matrix"><table><thead><tr><th>학기</th>${keys.map((k) => `<th>${esc(themeOf(k).abbr || k)}</th>`).join('')}<th>미지정</th><th>합계</th></tr></thead><tbody>`;
   for (const sem of model.semesters) {
     const mine = ps.filter((p) => p.semester === sem); if (!mine.length) continue;
-    html += `<tr><td class="num">${esc(sem)}</td>${keys.map((k) => { const v = mine.filter((p) => p.themes.includes(k)).length; const t = themeOf(k); return `<td class="v ${v ? '' : 'zero'}" style="--h:${t.h};--a:${(0.08 + 0.4 * v / Math.max(1, mine.length / 2)).toFixed(2)}">${v || '·'}</td>`; }).join('')}<td class="v zero">${mine.filter((p) => !p.themes.length).length || '·'}</td><td class="total num">${mine.length}</td></tr>`;
+    html += `<tr><td class="num">${esc(sem)}</td>${keys.map((k) => { const v = mine.filter((p) => p.themes.includes(k)).length; const t = themeOf(k); return `<td class="v ${v ? '' : 'zero'}" style="--h:${t.h};--a:${(0.08 + 0.4 * v / Math.max(1, mine.length / 2)).toFixed(2)}">${v || '·'}</td>`; }).join('')}${(() => { const v = mine.filter((p) => !p.themes.length).length; return `<td class="v ${v ? '' : 'zero'}">${v || '·'}</td>`; })()}<td class="total num">${mine.length}</td></tr>`;
   }
   html += `</tbody></table></div></div>`;
   // unmapped list
@@ -851,7 +872,9 @@ function openDetail(code) {
 }
 function sheetRowUrl(row) { return `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}&range=F${row}`; }
 $('#dClose').addEventListener('click', () => detail.close());
-detail.addEventListener('click', (e) => { if (e.target === detail) detail.close(); });
+// close only on a click outside the panel itself (the backdrop), not on its empty inner space
+function outside(dlg, e) { const r = dlg.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; }
+detail.addEventListener('click', (e) => { if (e.target === detail && outside(detail, e)) detail.close(); });
 detail.addEventListener('close', () => { if (lastFocus && lastFocus.focus) lastFocus.focus(); });
 
 /* ===================== settings ===================== */
@@ -863,7 +886,7 @@ $('#settingsBtn').addEventListener('click', () => {
   sdlg.showModal();
 });
 $('#sCancel').addEventListener('click', () => sdlg.close());
-sdlg.addEventListener('click', (e) => { if (e.target === sdlg) sdlg.close(); });
+sdlg.addEventListener('click', (e) => { if (e.target === sdlg && outside(sdlg, e)) sdlg.close(); });
 $('#settingsForm').addEventListener('submit', (e) => {
   e.preventDefault();
   settings.customUrl = clean($('#sUrl').value); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
