@@ -628,7 +628,7 @@ function buildModel({ header, rows }) {
 }
 
 /* ===================== state ===================== */
-const settings = Object.assign({ customUrl: '', transport: 'auto', pollSeconds: CONFIG.pollSeconds }, store.get('uoi.settings', {}));
+const settings = Object.assign({ editorUrl: 'https://script.google.com/a/macros/bonggokcho.com/s/AKfycbw85b8aC9Qn9ejXZNIT_Fep3aBAYk6nKSxKowZQyYLTd4yBkcHTGVj8fUwJ5-GmmT4Z/exec', customUrl: '', transport: 'auto', pollSeconds: CONFIG.pollSeconds }, store.get('uoi.settings', {}));
 const filter = Object.assign({ q: '', subjects: [], semesters: [], area: '', themes: [] }, store.get('uoi.filters', {}));
 let view = (location.hash.replace('#', '') || store.get('uoi.view', 'unit'));
 if (!['unit', 'theme', 'standard', 'summary'].includes(view)) view = 'unit';
@@ -909,7 +909,7 @@ sdlg.addEventListener('click', (e) => { if (e.target === sdlg && outside(sdlg, e
 $('#settingsForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const editorUrl = clean($('#sEditor').value);
-  if (editorUrl && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(editorUrl)) { toast('Apps Script 배포 주소(/exec)를 확인해 주세요'); return; }
+  if (editorUrl && !/^https:\/\/script\.google\.com\/(?:a\/macros\/[a-zA-Z0-9.-]+|macros)\/s\/[\w-]+\/exec$/.test(editorUrl)) { toast('Apps Script 배포 주소(/exec)를 확인해 주세요'); return; }
   settings.editorUrl = editorUrl;
   settings.customUrl = clean($('#sUrl').value); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
   store.set('uoi.settings', settings); sdlg.close(); schedulePoll(); sync(true);
