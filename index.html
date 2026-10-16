@@ -320,6 +320,16 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 .tcard .txt { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 @media(min-width:1500px) { .board { grid-template-columns:repeat(6,minmax(0,1fr)); } .board > .none { grid-template-columns:repeat(6,minmax(0,1fr)); } }
 @media(max-width:720px) { .board, .board > .none { grid-template-columns:minmax(0,1fr); } }
+
+.mapping-trigger { padding:2px; border:0; border-radius:6px; background:transparent; cursor:pointer; color:inherit; }
+.mapping-trigger:hover,.mapping-trigger[aria-expanded="true"] { outline:2px solid var(--accent); outline-offset:2px; }
+.plist li { flex-wrap:wrap; }
+.topic-picker { order:10; flex-basis:100%; display:flex; flex-wrap:wrap; gap:8px; padding:12px 0 4px; border-top:1px solid var(--line); margin-top:8px; }
+.topic-picker[hidden] { display:none; }
+.topic-choice { display:flex; align-items:center; gap:5px; border:1px solid var(--line); background:var(--surface); color:var(--fg); border-radius:8px; padding:6px 8px; font:inherit; font-size:12px; cursor:pointer; }
+.topic-choice:hover { border-color:var(--accent); background:var(--accent-soft); }
+.mapping-status { flex-basis:100%; font-size:12px; color:var(--fg-2); }
+.mapping-status.error { color:var(--bad); }
 </style>
 </head>
 <body>
@@ -392,6 +402,7 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 <dialog class="modal" id="settings" aria-label="설정">
   <div class="mhead"><h2>데이터 연결 설정</h2></div>
   <form class="mbody" id="settingsForm" method="dialog">
+    <div class="field"><label for="sClient">구글 직접 저장 연결 ID</label><input type="text" id="sClient" placeholder="관리자가 한 번 설정합니다"><div class="hint">Google Cloud에서 만든 웹용 OAuth 클라이언트 ID입니다. 비밀번호나 비밀 키를 입력하지 마세요. 등록 후 주제 배지를 눌러 구글 계정에 연결하면 시트에 저장됩니다.</div><button class="btn" type="button" id="disconnectGoogle">이 브라우저에서 구글 연결 끊기</button></div>
     <div class="field">
       <label for="sUrl">CSV 주소 (선택)</label>
       <input type="url" id="sUrl" placeholder="비워 두면 기본 시트(gid=0)를 직접 읽습니다">
@@ -436,6 +447,7 @@ const CONFIG = {
   sheetId: '18_ZA6uaC1YJq5xwXqs3c8XGuQ3gamQMg0MINzBC0FMk',
   gid: '0',                 // 「1학년 성취기준」 탭 (원본). 다른 탭은 여기서 계산해 보여준다.
   pollSeconds: 60,
+  oauthClientId: '',
 };
 CONFIG.sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}`;
 CONFIG.gvizBase = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${CONFIG.gid}&headers=1`;
@@ -605,6 +617,8 @@ function buildModel({ header, rows }) {
       unit: get(r, ci.unit) || '(단원 없음)', area: get(r, ci.area),
       code: codeLabel || ('#' + hashStr(text)), codeLabel, text,
       themes: parseThemes(get(r, ci.theme)),
+      sourceIdentity: JSON.stringify(r.slice(0, 6).map(clean)), themeRaw: get(r, ci.theme),
+      editable: ci.theme === 6 && ci.standard === 5,
       explanation: (!expl || /^해당\s*없음\.?$/.test(expl)) ? '' : expl,
     });
   });
@@ -874,7 +888,7 @@ function openDetail(code) {
   $('#dBody').innerHTML = `
     <div class="text">${esc(s.text)}</div>
     <div><h3>매핑된 주제</h3><div class="themesum">${themes.length ? themes.map((t) => `${badge(t, 'lg')}<span style="font-size:12.5px;color:var(--fg-2);align-self:center;margin-right:8px">${esc(themeOf(t).ko)}</span>`).join('') : badge(NONE, 'lg')}</div></div>
-    <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${p.themes.length ? p.themes.map((t) => badge(t)).join('') : badge(NONE)}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
+    <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${mappingControl(p)}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
     <div><h3>성취기준 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div>`;
   if (!detail.open) detail.showModal();
   $('#dBody').scrollTop = 0;
@@ -887,18 +901,122 @@ function outside(dlg, e) { const r = dlg.getBoundingClientRect(); return e.clien
 detail.addEventListener('click', (e) => { if (e.target === detail && outside(detail, e)) detail.close(); });
 detail.addEventListener('close', () => { if (lastFocus && lastFocus.focus) lastFocus.focus(); });
 
+/* ===================== direct Google Sheets saving ===================== */
+let googleAccessToken = '', googleTokenExpires = 0, googleAuthPending = false, mappingSaving = false;
+let googleSheetTitle = '';
+const googleScope = 'https://www.googleapis.com/auth/spreadsheets';
+const gis = document.createElement('script');
+gis.src = 'https://accounts.google.com/gsi/client'; gis.async = true;
+gis.onerror = () => { gis.dataset.failed = 'true'; };
+document.head.append(gis);
+function clearGoogleConnection() { googleAccessToken = ''; googleTokenExpires = 0; googleSheetTitle = ''; }
+function authorizeGoogle() {
+  if (googleAccessToken && Date.now() < googleTokenExpires) return Promise.resolve();
+  const id = settings.oauthClientId || CONFIG.oauthClientId;
+  if (!id) return Promise.reject(new Error('구글 직접 저장 연결 설정이 필요합니다. 설정에서 연결 ID를 등록해 주세요.'));
+  if (!window.google?.accounts?.oauth2) return Promise.reject(new Error('구글 로그인 기능을 불러오지 못했습니다. 잠시 후 다시 누르거나 브라우저의 차단 설정을 확인해 주세요.'));
+  if (googleAuthPending) return Promise.reject(new Error('열린 구글 로그인 창에서 연결을 마쳐 주세요.'));
+  googleAuthPending = true;
+  return new Promise((resolve,reject) => {
+    const timer = setTimeout(() => { googleAuthPending=false; reject(new Error('구글 연결 시간이 지났습니다. 다시 눌러 주세요.')); }, 120000);
+    const fail = message => { clearTimeout(timer);googleAuthPending=false;reject(new Error(message)); };
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id:id, scope:googleScope,
+      callback:response => {
+        if (response.error || !response.access_token) { fail('구글 연결이 취소됐거나 거절됐습니다. 다시 선택해 주세요.'); return; }
+        if (!google.accounts.oauth2.hasGrantedAllScopes(response,googleScope)) { fail('시트 저장 권한을 승인해야 저장할 수 있습니다.'); return; }
+        clearTimeout(timer); googleAuthPending=false;
+        googleAccessToken=response.access_token;googleTokenExpires=Date.now()+Math.max(0,(Number(response.expires_in)||3600)-60)*1000;resolve();
+      },error_callback:()=>fail('구글 로그인 창이 닫혔거나 차단됐습니다. 다시 눌러 주세요.')
+    });
+    try { client.requestAccessToken({prompt:''}); } catch { fail('구글 로그인 창을 열지 못했습니다. 다시 눌러 주세요.'); }
+  });
+}
+async function sheetsRequest(path, options={}) {
+  const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(CONFIG.sheetId)+path, {
+    ...options, cache:'no-store', headers:{'Authorization':'Bearer '+googleAccessToken,'Content-Type':'application/json',...(options.headers||{})}, signal:AbortSignal.timeout(20000)
+  });
+  if (res.status===401) { clearGoogleConnection(); throw new Error('구글 연결이 만료됐습니다. 주제를 다시 눌러 연결해 주세요.'); }
+  if (res.status===403) throw new Error('저장 권한이 없습니다. 이 계정의 원본 시트 편집 권한과 Google Sheets API 사용 설정을 확인해 주세요.');
+  if (!res.ok) throw new Error('구글 시트 요청을 처리하지 못했습니다. 잠시 후 다시 불러와 확인해 주세요. ('+res.status+')');
+  return res.json();
+}
+async function sheetTitle() {
+  if (!googleSheetTitle) {
+    const meta=await sheetsRequest('?fields=sheets.properties');
+    const sheet=meta.sheets.find(s=>String(s.properties.sheetId)===CONFIG.gid);
+    if (!sheet) throw new Error('원본 시트 탭을 찾을 수 없습니다.');
+    googleSheetTitle=sheet.properties.title;
+  }
+  return "'"+googleSheetTitle.replace(/'/g,"''")+"'";
+}
+async function readAuthorizedSheet() {
+  const title=await sheetTitle();
+  const response=await sheetsRequest('/values/'+encodeURIComponent(title+'!A:H')+'?valueRenderOption=FORMATTED_VALUE');
+  const values=response.values||[];
+  return {header:values[0]||[],rows:values.slice(1),via:'api'};
+}
+function mappingControl(p) {
+  return `<button type="button" class="mapping-trigger" data-map-row="${p.row}" aria-expanded="false" aria-label="${esc(p.semester+' '+p.unit+' 주제 변경')}">${p.themes.length?p.themes.map(t=>badge(t)).join(''):badge(NONE)}</button><div class="topic-picker" hidden data-picker-row="${p.row}" role="group" aria-label="지정할 초학문적 주제">${[...THEMES.map(t=>t.key),NONE].map(key=>`<button type="button" class="topic-choice" data-set-row="${p.row}" data-set-theme="${key}" title="${esc(themeOf(key).ko)}">${badge(key)}<span>${esc(themeOf(key).ko)}</span></button>`).join('')}<button type="button" class="topic-choice" data-picker-close="${p.row}">취소</button><span class="mapping-status" role="status" aria-live="polite"></span></div>`;
+}
+$('#dBody').addEventListener('click',async event=>{
+  const trigger=event.target.closest('[data-map-row]');
+  if (trigger) {
+    if(mappingSaving)return;
+    const picker=$(`[data-picker-row="${trigger.dataset.mapRow}"]`),open=picker.hidden;
+    document.querySelectorAll('.topic-picker').forEach(el=>el.hidden=true);
+    document.querySelectorAll('[data-map-row]').forEach(el=>el.setAttribute('aria-expanded','false'));
+    picker.hidden=!open;trigger.setAttribute('aria-expanded',String(open)); return;
+  }
+  const close=event.target.closest('[data-picker-close]');
+  if(close){if(mappingSaving)return;const row=close.dataset.pickerClose;$(`[data-picker-row="${row}"]`).hidden=true;$(`[data-map-row="${row}"]`).setAttribute('aria-expanded','false');return;}
+  const choice=event.target.closest('[data-set-row]');if(!choice||mappingSaving)return;
+  const p=model.placements.find(p=>p.row===Number(choice.dataset.setRow));if(!p)return;
+  const desired=choice.dataset.setTheme===NONE?[]:[choice.dataset.setTheme];
+  const picker=choice.closest('.topic-picker'), status=picker.querySelector('.mapping-status');
+  mappingSaving=true;picker.querySelectorAll('button').forEach(el=>el.disabled=true);status.className='mapping-status';status.textContent='구글 시트에 저장 중…';
+  try {
+    if(!p.editable)throw new Error('시트 열 구성이 변경됐습니다. 원본 시트의 열을 확인해 주세요.');
+    await authorizeGoogle();
+    const title=await sheetTitle();
+    const response=await sheetsRequest('/values/'+encodeURIComponent(title+'!A'+p.row+':G'+p.row)+'?valueRenderOption=FORMATTED_VALUE');
+    const row=response.values?.[0]||[];
+    const identity=JSON.stringify(Array.from({length:6},(_,i)=>clean(row[i])));
+    if(identity!==p.sourceIdentity||clean(row[6])!==p.themeRaw)throw new Error('시트 내용이 먼저 바뀌었습니다. 새로고침한 뒤 다시 지정해 주세요.');
+    const value=desired.map(t=>themeOf(t).ko).join('\n');
+    // Read-before-write catches observed edits. Sheets does not provide atomic compare-and-swap for values.
+    await sheetsRequest('/values/'+encodeURIComponent(title+'!G'+p.row)+'?valueInputOption=RAW',{method:'PUT',body:JSON.stringify({values:[[value]]})});
+    const savedPlacement=model.placements.find(item=>item.row===p.row && item.sourceIdentity===p.sourceIdentity);
+    if (savedPlacement) { savedPlacement.themes=desired; savedPlacement.themeRaw=value; }
+    model.standards.get(p.code).themes=new Set(model.standards.get(p.code).placements.flatMap(p=>p.themes));
+    render();openDetail(p.code);toast('주제를 구글 시트에 저장했습니다');
+    // Avoid displaying the old public CSV cache after saving; read the authenticated API while connected.
+    lastAttempt=Date.now();
+  }catch(error){
+    status.className='mapping-status error';status.textContent=error.name==='TimeoutError'?'응답을 확인하지 못했습니다. 새로고침으로 실제 저장 여부를 확인해 주세요.':error.message;
+    if(!(settings.oauthClientId||CONFIG.oauthClientId)){
+      const setup=document.createElement('button');setup.type='button';setup.className='topic-choice';setup.textContent='구글 연결 설정';setup.onclick=()=>{detail.close();$('#settingsBtn').click();};status.append(setup);
+    }
+  }finally{mappingSaving=false;picker.querySelectorAll('button').forEach(el=>el.disabled=false);}
+});
+$('#disconnectGoogle').addEventListener('click',()=>{clearGoogleConnection();toast('이 브라우저의 구글 연결을 끊었습니다');});
+
 /* ===================== settings ===================== */
 const sdlg = $('#settings');
 $('#sheetLink').href = CONFIG.sheetUrl;
 $('#sDefaultUrl').textContent = CONFIG.csvUrl;
 $('#settingsBtn').addEventListener('click', () => {
-  $('#sUrl').value = settings.customUrl; $('#sTransport').value = settings.transport; $('#sPoll').value = String(settings.pollSeconds);
+  $('#sClient').value = settings.oauthClientId || CONFIG.oauthClientId; $('#sUrl').value = settings.customUrl; $('#sTransport').value = settings.transport; $('#sPoll').value = String(settings.pollSeconds);
   sdlg.showModal();
 });
 $('#sCancel').addEventListener('click', () => sdlg.close());
 sdlg.addEventListener('click', (e) => { if (e.target === sdlg && outside(sdlg, e)) sdlg.close(); });
 $('#settingsForm').addEventListener('submit', (e) => {
   e.preventDefault();
+  const clientId = clean($('#sClient').value);
+  if (clientId && !/^[a-zA-Z0-9._-]+\.apps\.googleusercontent\.com$/.test(clientId)) { toast('구글 연결 ID를 확인해 주세요'); return; }
+  if (clientId !== (settings.oauthClientId || CONFIG.oauthClientId)) clearGoogleConnection();
+  settings.oauthClientId = clientId;
   settings.customUrl = clean($('#sUrl').value); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
   store.set('uoi.settings', settings); sdlg.close(); schedulePoll(); sync(true);
 });
@@ -918,15 +1036,15 @@ function applyData(data, { fromCache = false } = {}) {
   return changed;
 }
 async function sync(manual = false) {
-  if (loading) return; loading = true; lastAttempt = Date.now();
+  if (loading || mappingSaving) return; loading = true; lastAttempt = Date.now();
   setSync('busy', manual ? '새로고침 중…' : (lastSync ? `동기화 ${fmtTime(lastSync)} · 확인 중` : '불러오는 중…'));
   try {
-    const data = await loadRemote(settings);
+    const data = googleAccessToken && Date.now() < googleTokenExpires ? await readAuthorizedSheet() : await loadRemote(settings);
     const hadData = !!model;
     const changed = applyData(data);
     lastSync = Date.now(); lastVia = data.via;
     store.set('uoi.cache', { data: { header: data.header, rows: data.rows }, at: lastSync });
-    setSync('ok', `동기화 ${fmtTime(lastSync)} · ${data.via === 'jsonp' ? 'JSONP' : 'CSV'}`);
+    setSync('ok', `동기화 ${fmtTime(lastSync)} · ${data.via === 'api' ? '구글 직접 연결' : data.via === 'jsonp' ? 'JSONP' : 'CSV'}`);
     if (changed && hadData) toast(`시트 변경 사항을 반영했습니다 (${fmtTime(lastSync)})`);
     else if (manual) toast(changed ? '불러왔습니다' : '변경 사항이 없습니다');
   } catch (err) {
