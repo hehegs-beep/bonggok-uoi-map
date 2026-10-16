@@ -1,0 +1,17 @@
+<!doctype html><html lang="ko"><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+body{font:16px/1.6 system-ui,sans-serif;background:#f6f7f4;color:#1d2420;margin:0;padding:24px}main{max-width:800px;margin:auto}article{background:white;border:1px solid #d9ded6;border-radius:12px;padding:20px;margin:16px 0}label{display:block;padding:6px}button{padding:10px 18px;border:1px solid #0f6b5f;border-radius:8px;background:#0f6b5f;color:white;cursor:pointer}button:disabled{opacity:.5}p[role=status]{white-space:pre-wrap}small{color:#55605a}</style></head><body><main><h1>단원별 주제 수정</h1><p>주제를 선택하고 저장해 주세요. 모두 해제하면 미지정으로 저장됩니다.</p><button id="reload">새로 불러오기</button><p id="status" role="status">불러오는 중…</p><div id="rows"></div></main><script>
+const code = <?!= JSON.stringify(code).replace(/</g, '\\u003c') ?>;
+const status = document.getElementById('status');
+function load(){status.textContent='불러오는 중…';document.getElementById('rows').replaceChildren();google.script.run.withSuccessHandler(render).withFailureHandler(e=>status.textContent=e.message).listMappings(code);}
+function render(data){status.textContent=data.rows.length?'성취기준 '+code:'해당 성취기준이 없습니다.';data.rows.forEach(row=>{
+ const card=document.createElement('article'), title=document.createElement('h2'), text=document.createElement('p'), note=document.createElement('small'), result=document.createElement('p');
+ title.textContent=row.subject+' · '+row.semester+' · '+row.unit;text.textContent=row.standard;note.textContent='시트 '+row.row+'행';result.setAttribute('role','status');card.append(title,text,note);
+ const known=new Set(data.topics), old=row.value.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean), unknown=old.filter(x=>!known.has(x));
+ const checks=data.topics.map(topic=>{const label=document.createElement('label'), input=document.createElement('input');input.type='checkbox';input.checked=old.includes(topic);label.append(input,document.createTextNode(' '+topic));card.append(label);return {input,topic};});
+ const save=document.createElement('button');save.textContent='저장';card.append(save,result);
+ if(unknown.length){save.disabled=true;result.textContent='기존 값에 지정된 6개 주제 외의 내용이 있어 시트에서 확인이 필요합니다: '+unknown.join(', ');}
+ save.onclick=()=>{save.disabled=true;result.textContent='저장 중…';const topics=checks.filter(x=>x.input.checked).map(x=>x.topic);google.script.run.withSuccessHandler(value=>{row.value=value;save.disabled=false;result.textContent='저장했습니다. 조회 화면으로 돌아가 새로고침하면 반영됩니다.';}).withFailureHandler(e=>{save.disabled=false;result.textContent=e.message;}).saveMapping({row:row.row,identity:row.identity,previous:row.value,topics});};
+ document.getElementById('rows').append(card);
+});}
+document.getElementById('reload').onclick=load;load();
+</script></body></html>
