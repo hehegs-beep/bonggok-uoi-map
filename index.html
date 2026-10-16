@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>봉곡 1학년 UOI 매핑</title>
+<title>봉곡 UOI 매핑</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Gowun+Batang:wght@700&display=swap">
@@ -339,13 +339,13 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 .guidance-list {padding-left:19px;font-size:13px;line-height:1.75;}
 .guidance-list li {margin:8px 0;}
 .guidance-common summary {cursor:pointer;font-size:13px;font-weight:600;padding:10px 0;}
-</style>
+.grade-nav{display:flex;gap:8px;padding:12px 0;flex-wrap:wrap}.grade-nav button{border:1px solid var(--line,#d6ddd7);border-radius:9px;background:white;padding:9px 18px;cursor:pointer;font:inherit}.grade-nav button[aria-pressed="true"]{background:#155f50;color:white}.source-note{font-size:12px;color:var(--fg-2);padding-bottom:10px;line-height:1.6}.source-note button{margin-left:8px}.placement-note{display:block;font-size:12px;color:var(--fg-2);white-space:normal;width:100%}.plist li{flex-wrap:wrap}</style>
 </head>
 <body>
 
 <header class="appbar">
   <div class="brand">
-    <h1>봉곡 1학년 UOI 매핑</h1>
+    <h1>봉곡 UOI 매핑</h1>
     <span class="sub">2022 개정 성취기준 × PYP 초학문적 주제</span>
   </div>
   <div class="spacer"></div>
@@ -368,6 +368,8 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 </header>
 
 <div class="rail" id="rail">
+  <nav id="gradeNav" class="grade-nav" aria-label="학년 선택"></nav>
+  <div id="sourceNote" class="source-note"></div>
   <div class="rail-top">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -453,15 +455,24 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 'use strict';
 
 /* ===================== configuration ===================== */
-const CONFIG = {
-  sheetId: '18_ZA6uaC1YJq5xwXqs3c8XGuQ3gamQMg0MINzBC0FMk',
-  gid: '0',                 // 「1학년 성취기준」 탭 (원본). 다른 탭은 여기서 계산해 보여준다.
-  pollSeconds: 60,
-  oauthClientId: '48269719394-v8mngrqneiqibr60l75ef8i9plalhbnh.apps.googleusercontent.com',
+const SOURCES = {
+  1:{sheetId:'18_ZA6uaC1YJq5xwXqs3c8XGuQ3gamQMg0MINzBC0FMk',title:'1학년 성취기준',gid:'0'},
+  2:{sheetId:'1_vhchAKOBqE8HSZnDGGuhLRtG0jxcxYQsDLXPzdoLwk',title:'2학년 성취기준',gid:'0'},
+  3:{sheetId:'1eF2nfqaD5suX5A1Nz2TfKUOHd-_k2vSXtfubDTJJgvs',title:'3학년 성취기준',gid:'0'},
+  4:{sheetId:'1G_9_7zQzltir2VWir1yigNFhwTT85jdw86hRGQ8WKkU',title:'4학년 성취기준',gid:'0'},
+  5:{sheetId:'1BadJjRWGacrj9s0vnS6rBGvlAZ1LQt1HR8surpJXqwM',title:'5학년 성취기준',gid:'0'},
+  6:{sheetId:'1UpClLImzZvxnNpLg6_V97xu2mBh9CN_9js5e59pSlCo',title:'웹앱 연동',gid:'16061016'},
 };
-CONFIG.sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}`;
-CONFIG.gvizBase = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${CONFIG.gid}&headers=1`;
-CONFIG.csvUrl = `${CONFIG.gvizBase}&tqx=out:csv`;
+let activeGrade = Math.min(6,Math.max(1,Number(new URLSearchParams(location.search).get('grade')||localStorage.getItem('uoi.grade')||1))) || 1;
+const CONFIG = {pollSeconds:60,oauthClientId:'48269719394-v8mngrqneiqibr60l75ef8i9plalhbnh.apps.googleusercontent.com'};
+function configureSource(){
+ Object.assign(CONFIG,SOURCES[activeGrade]);
+ CONFIG.sheetUrl=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}`;
+ CONFIG.csvUrl=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/export?format=csv&gid=${CONFIG.gid}`;
+ CONFIG.gvizBase=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${CONFIG.gid}&headers=1`;
+}
+configureSource();
+function gradeKey(name){return `uoi.${name}.grade${activeGrade}`;}
 
 const THEMES = [
   { key: 'WWA',   ko: '우리는 누구인가',          en: 'Who we are',                      h: 345 },
@@ -471,7 +482,7 @@ const THEMES = [
   { key: 'HWOO',  ko: '우리 자신을 조직하는 방식', en: 'How we organize ourselves',       h: 100 },
   { key: 'STP',   ko: '우리 모두의 지구',          en: 'Sharing the planet',              h: 175 },
 ];
-const SUBJECT_ORDER = ['국어', '수학', '바른생활', '슬기로운생활', '즐거운생활', '통합', '영어', '체육', '음악', '미술'];
+const SUBJECT_ORDER = ['국어', '도덕', '사회', '수학', '과학', '실과', '바른생활', '슬기로운생활', '즐거운생활', '통합', '영어', '체육', '음악', '미술'];
 const INTEGRATED_UNITS = ['학교', '사람들', '우리나라', '탐험', '하루', '약속', '상상', '이야기'];
 const NONE = 'NONE';
 
@@ -520,7 +531,7 @@ function parseCSV(text) {
     field += c; i++;
   }
   if (field !== '' || row.length) { row.push(field); rows.push(row); }
-  return rows.filter((r) => r.some((v) => v.trim() !== ''));
+  return rows;
 }
 async function fetchCSV(url) {
   const sep = url.includes('?') ? '&' : '?';
@@ -552,14 +563,8 @@ function fetchJSONP() {
   });
 }
 async function loadRemote(settings) {
-  const isFile = location.protocol === 'file:';
-  const custom = settings.customUrl;
-  const mode = settings.transport;
-  const tryCSV = () => fetchCSV(custom || CONFIG.csvUrl);
-  if (custom || mode === 'csv') return { ...(await tryCSV()), via: 'csv' };
-  if (mode === 'jsonp' || (mode === 'auto' && isFile)) return { ...(await fetchJSONP()), via: 'jsonp' };
-  try { return { ...(await tryCSV()), via: 'csv' }; }
-  catch (e) { try { return { ...(await fetchJSONP()), via: 'jsonp' }; } catch (e2) { throw new Error(`${e.message} / ${e2.message}`); } }
+  const data=await fetchCSV(settings.customUrl || CONFIG.csvUrl);
+  return {...data,via:'csv'};
 }
 
 /* ===================== normalization ===================== */
@@ -579,6 +584,7 @@ function columnIndex(header) {
 }
 function normSemester(raw, grade) {
   const s = clean(raw);
+  grade=String(grade).match(/\d+/)?.[0] || activeGrade;
   const nums = s.match(/\d+/g) || [];
   if (nums.length >= 3) return `${+nums[1]}-${+nums[2]}`;      // 2026-01-02 → 1-2
   if (nums.length === 2) return `${+nums[0]}-${+nums[1]}`;     // 1-2, 1/2, 1. 2
@@ -611,18 +617,21 @@ function codeRank(code) { return code.replace(/\d+/g, (d) => d.padStart(3, '0'))
 
 function buildModel({ header, rows }) {
   const ci = columnIndex(header);
+  if(ci.grade<0 && activeGrade<6) ci.grade=1;
+  if(ci.semester<0 && activeGrade<6) ci.semester=2;
   if (ci.standard < 0) throw new Error('「성취기준」 열을 찾지 못했습니다. 시트 머리글을 확인하세요.');
   const get = (r, i) => (i < 0 ? '' : clean(r[i]));
   const placements = [];
   rows.forEach((r, i) => {
     const raw = get(r, ci.standard); if (!raw) return;
     const m = raw.match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
-    const codeLabel = m ? clean(m[1]) : '';
+    const codeLabel = m ? clean(m[1]).replace(/\s/g,'') : '';
     const text = m ? clean(m[2]) : raw;
     const grade = get(r, ci.grade);
+    if(Number(grade.match(/\d+/)?.[0])!==activeGrade)return;
     const expl = get(r, ci.explanation);
     placements.push({
-      row: i + 2, subject: get(r, ci.subject) || '(교과 없음)', grade,
+      row: i + 2, note: activeGrade===6 ? r.slice(8,13).map(clean).filter(Boolean).join(' · ') : '', subject: get(r, ci.subject) || '(교과 없음)', grade,
       semester: normSemester(get(r, ci.semester), grade),
       unit: get(r, ci.unit) || '(단원 없음)', area: get(r, ci.area),
       code: codeLabel || ('#' + hashStr(text)), codeLabel, text,
@@ -650,7 +659,8 @@ function buildModel({ header, rows }) {
 
 /* ===================== state ===================== */
 const settings = Object.assign({ customUrl: '', transport: 'auto', pollSeconds: CONFIG.pollSeconds }, store.get('uoi.settings', {}));
-const filter = Object.assign({ q: '', subjects: [], semesters: [], area: '', themes: [] }, store.get('uoi.filters', {}));
+settings.customUrl=store.get(gradeKey('url'),'');
+const filter = Object.assign({ q: '', subjects: [], semesters: [], area: '', themes: [] }, store.get(gradeKey('filters'), {}));
 let view = (location.hash.replace('#', '') || store.get('uoi.view', 'unit'));
 if (!['unit', 'theme', 'standard', 'summary'].includes(view)) view = 'unit';
 let model = null, dataHash = '', lastSync = null, lastVia = '', pollTimer = null, loading = false, lastAttempt = 0;
@@ -710,7 +720,7 @@ $('#q').addEventListener('input', (e) => { $('#qClear').hidden = !e.target.value
 $('#qClear').addEventListener('click', () => { $('#q').value = ''; $('#qClear').hidden = true; filter.q = ''; onFilterChange(); $('#q').focus(); });
 $('#resetBtn').addEventListener('click', () => { Object.assign(filter, { q: '', subjects: [], semesters: [], area: '', themes: [] }); buildRail(); onFilterChange(); });
 $('#filterToggle').addEventListener('click', () => { const r = $('#rail'); const open = r.classList.toggle('open'); $('#filterToggle').setAttribute('aria-expanded', String(open)); });
-function onFilterChange() { store.set('uoi.filters', filter); updateResetState(); render(); }
+function onFilterChange() { store.set(gradeKey('filters'), filter); updateResetState(); render(); }
 
 /* ===================== filtering ===================== */
 function matchQ(p, q) {
@@ -900,7 +910,7 @@ function openDetail(code) {
   $('#dBody').innerHTML = `
     <div class="text">${esc(s.text)}</div>
     <div><h3>매핑된 주제</h3><div class="themesum">${themes.length ? themes.map((t) => `${badge(t, 'lg')}<span style="font-size:12.5px;color:var(--fg-2);align-self:center;margin-right:8px">${esc(themeOf(t).ko)}</span>`).join('') : badge(NONE, 'lg')}</div></div>
-    <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${mappingControl(p)}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
+    <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${mappingControl(p)}${p.note?`<span class="placement-note">${esc(p.note)}</span>`:''}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
     ${curriculumPanel(s)}
     <details><summary>시트에 기록된 해설</summary><div><h3>시트 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div></details>`;
   if (!detail.open) detail.showModal();
@@ -928,6 +938,7 @@ detail.addEventListener('close', () => { if (lastFocus && lastFocus.focus) lastF
 /* ===================== direct Google Sheets saving ===================== */
 let googleAccessToken = '', googleTokenExpires = 0, googleAuthPending = false, mappingSaving = false;
 let googleSheetTitle = '';
+let sourceGeneration=0;
 const googleScope = 'https://www.googleapis.com/auth/spreadsheets';
 const gis = document.createElement('script');
 gis.src = 'https://accounts.google.com/gsi/client'; gis.async = true;
@@ -967,8 +978,11 @@ async function sheetsRequest(path, options={}) {
 }
 async function sheetTitle() {
   if (!googleSheetTitle) {
+    const generation=sourceGeneration;
     const meta=await sheetsRequest('?fields=sheets.properties');
-    const sheet=meta.sheets.find(s=>String(s.properties.sheetId)===CONFIG.gid);
+    if(generation!==sourceGeneration)throw new Error('학년이 변경되었습니다.');
+    const sheet=meta.sheets.find(s=>s.properties.title===CONFIG.title);
+    if(sheet){CONFIG.gid=String(sheet.properties.sheetId);SOURCES[activeGrade].gid=CONFIG.gid;configureSource();updateSourceUI();}
     if (!sheet) throw new Error('원본 시트 탭을 찾을 수 없습니다.');
     googleSheetTitle=sheet.properties.title;
   }
@@ -976,7 +990,7 @@ async function sheetTitle() {
 }
 async function readAuthorizedSheet() {
   const title=await sheetTitle();
-  const response=await sheetsRequest('/values/'+encodeURIComponent(title+'!A:H')+'?valueRenderOption=FORMATTED_VALUE');
+  const response=await sheetsRequest('/values/'+encodeURIComponent(title+'!A:Q')+'?valueRenderOption=FORMATTED_VALUE');
   const values=response.values||[];
   return {header:values[0]||[],rows:values.slice(1),via:'api'};
 }
@@ -1012,6 +1026,7 @@ $('#dBody').addEventListener('click',async event=>{
     await sheetsRequest('/values/'+encodeURIComponent(title+'!G'+p.row)+'?valueInputOption=RAW',{method:'PUT',body:JSON.stringify({values:[[value]]})});
     const savedPlacement=model.placements.find(item=>item.row===p.row && item.sourceIdentity===p.sourceIdentity);
     if (savedPlacement) { savedPlacement.themes=desired; savedPlacement.themeRaw=value; }
+    store.del(gradeKey('cache'));
     model.standards.get(p.code).themes=new Set(model.standards.get(p.code).placements.flatMap(p=>p.themes));
     render();openDetail(p.code);toast('주제를 구글 시트에 저장했습니다');
     // Avoid displaying the old public CSV cache after saving; read the authenticated API while connected.
@@ -1041,10 +1056,10 @@ $('#settingsForm').addEventListener('submit', (e) => {
   if (clientId && !/^[a-zA-Z0-9._-]+\.apps\.googleusercontent\.com$/.test(clientId)) { toast('구글 연결 ID를 확인해 주세요'); return; }
   if (clientId !== (settings.oauthClientId || CONFIG.oauthClientId)) clearGoogleConnection();
   settings.oauthClientId = clientId;
-  settings.customUrl = clean($('#sUrl').value); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
+  settings.customUrl = clean($('#sUrl').value); store.set(gradeKey('url'),settings.customUrl); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
   store.set('uoi.settings', settings); sdlg.close(); schedulePoll(); sync(true);
 });
-$('#sClearCache').addEventListener('click', () => { store.del('uoi.cache'); toast('캐시를 지웠습니다'); });
+$('#sClearCache').addEventListener('click', () => { store.del(gradeKey('cache')); toast('캐시를 지웠습니다'); });
 
 /* ===================== sync loop ===================== */
 function setSync(state, text) { const el = $('#sync'); el.className = 'sync ' + state; $('#syncText').textContent = text; $('#refreshBtn').classList.toggle('spin', state === 'busy'); }
@@ -1060,28 +1075,31 @@ function applyData(data, { fromCache = false } = {}) {
   return changed;
 }
 async function sync(manual = false) {
-  if (loading || mappingSaving) return; loading = true; lastAttempt = Date.now();
+  if (loading || mappingSaving) return; const generation=sourceGeneration; loading = true; lastAttempt = Date.now();
   setSync('busy', manual ? '새로고침 중…' : (lastSync ? `동기화 ${fmtTime(lastSync)} · 확인 중` : '불러오는 중…'));
   try {
     const data = googleAccessToken && Date.now() < googleTokenExpires ? await readAuthorizedSheet() : await loadRemote(settings);
+    if(generation!==sourceGeneration||mappingSaving)return;
     const hadData = !!model;
     const changed = applyData(data);
     lastSync = Date.now(); lastVia = data.via;
-    store.set('uoi.cache', { data: { header: data.header, rows: data.rows }, at: lastSync });
+    store.set(gradeKey('cache'), { data: { header: data.header, rows: data.rows }, at: lastSync });
     setSync('ok', `동기화 ${fmtTime(lastSync)} · ${data.via === 'api' ? '구글 직접 연결' : data.via === 'jsonp' ? 'JSONP' : 'CSV'}`);
     if (changed && hadData) toast(`시트 변경 사항을 반영했습니다 (${fmtTime(lastSync)})`);
     else if (manual) toast(changed ? '불러왔습니다' : '변경 사항이 없습니다');
   } catch (err) {
+    if(generation!==sourceGeneration)return;
     console.error(err);
-    const cached = store.get('uoi.cache', null);
+    const cached = store.get(gradeKey('cache'), null);
     if (!model && cached) { try { applyData(cached.data); } catch {} }
+    if(activeGrade===6 && !model)showGrade6Setup();
     setSync('err', model ? `연결 실패 · ${cached ? fmtTime(cached.at) + ' 캐시 표시' : '이전 데이터 표시'}` : '불러오지 못했습니다');
     if (!model) {
       $('#statusLine').innerHTML = '';
-      $('#viewUnit').innerHTML = `<div class="empty"><strong>시트를 읽지 못했습니다</strong>${esc(err.message)}<br><br>시트가 「링크가 있는 모든 사용자」에게 공개되어 있는지, 또는 설정에서 CSV 주소가 맞는지 확인하세요.<br><br><button class="btn primary" id="retryBtn">다시 시도</button></div>`;
+      $('#viewUnit').innerHTML = `<div class="empty"><strong>시트를 읽지 못했습니다</strong>${esc(err.message)}<br><br>6학년은 위의 ‘6학년 연동 탭 만들기’를 먼저 진행해 주세요.<br>시트가 「링크가 있는 모든 사용자」에게 공개되어 있는지, 또는 설정에서 CSV 주소가 맞는지 확인하세요.<br><br><button class="btn primary" id="retryBtn">다시 시도</button></div>`;
       $('#retryBtn').addEventListener('click', () => sync(true));
     } else if (manual) toast('시트에 연결하지 못했습니다: ' + err.message);
-  } finally { loading = false; }
+  } finally { if(generation===sourceGeneration)loading = false; }
 }
 function schedulePoll() {
   clearInterval(pollTimer); pollTimer = null;
@@ -1091,9 +1109,87 @@ $('#refreshBtn').addEventListener('click', () => sync(true));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastAttempt > 10000) sync(); });
 window.addEventListener('focus', () => { if (Date.now() - lastAttempt > 10000) sync(); });
 
+function updateSourceUI(){
+ document.title=`봉곡 ${activeGrade}학년 UOI 매핑`;
+ document.querySelector('h1').textContent=`봉곡 ${activeGrade}학년 UOI 매핑`;
+ $('#gradeNav').innerHTML=Object.keys(SOURCES).map(g=>`<button type="button" data-grade="${g}" aria-pressed="${Number(g)===activeGrade}">${g}학년</button>`).join('');
+ $('#sheetLink').href=CONFIG.sheetUrl;$('#sDefaultUrl').textContent=CONFIG.csvUrl;
+ $('#sync').title=`데이터 출처: ${activeGrade}학년 구글 시트 「${CONFIG.title}」`;
+ $('#sourceNote').textContent=`${activeGrade}학년 · 원본: 구글 시트 「${CONFIG.title}」 · 주제 변경은 이 시트에 저장됩니다.`;
+ if(activeGrade===6)$('#sourceNote').append(document.createTextNode(' 기존 종합·과목별 탭은 참고용이며 연동 탭과 자동으로 맞춰지지 않습니다.'));
+}
+$('#gradeNav').addEventListener('click',e=>{
+ const b=e.target.closest('[data-grade]');if(!b||Number(b.dataset.grade)===activeGrade)return;
+ if(mappingSaving||googleAuthPending){toast('현재 저장 또는 구글 연결을 마친 뒤 학년을 바꿔 주세요');return;}
+ store.set(gradeKey('filters'),filter);
+ activeGrade=Number(b.dataset.grade);store.set('uoi.grade',String(activeGrade));
+ const url=new URL(location.href);url.searchParams.set('grade',activeGrade);history.replaceState(null,'',url);
+ sourceGeneration++;loading=false;model=null;dataHash='';lastSync=null;googleSheetTitle='';extraThemes.clear();
+ configureSource();settings.customUrl=store.get(gradeKey('url'),'');
+ Object.assign(filter,{q:'',subjects:[],semesters:[],area:'',themes:[]},store.get(gradeKey('filters'),{}));
+ $('#q').value=filter.q;detail.close();
+ document.querySelectorAll('main > section').forEach(el=>el.innerHTML='');$('#statusLine').textContent='';
+ updateSourceUI();const cache=store.get(gradeKey('cache'),null);if(cache)try{applyData(cache.data);}catch{}
+ sync();
+});
+function showGrade6Setup(){
+ if($('#setupGrade6'))return;
+ $('#sourceNote').insertAdjacentHTML('beforeend','<br><button type="button" class="btn primary" id="setupGrade6">6학년 연동 탭 만들기</button><span id="setupStatus" role="status"></span>');
+ $('#setupGrade6').onclick=initializeGrade6;
+}
+async function initializeGrade6(){
+ if(activeGrade!==6||mappingSaving)return;
+ const button=$('#setupGrade6'),status=$('#setupStatus');mappingSaving=true;button.disabled=true;
+ try{
+  status.textContent=' 구글 연결 중…';await authorizeGoogle();
+  const meta=await sheetsRequest('?fields=sheets.properties');
+  const existing=meta.sheets.find(s=>s.properties.title==='웹앱 연동');
+  if(existing){SOURCES[6].gid=String(existing.properties.sheetId);configureSource();googleSheetTitle='';updateSourceUI();return;}
+  status.textContent=' 1·2학기 원본과 병합 셀을 읽는 중…';
+  const titles=['1학기 종합','(수정중)2학기 종합'];
+  const ranges=titles.map(t=>'ranges='+encodeURIComponent("'"+t+"'!A1:Q1500")).join('&');
+  const book=await sheetsRequest('?includeGridData=true&'+ranges+'&fields=sheets(properties,merges,data(startRow,startColumn,rowData.values.formattedValue))');
+  const header=['교과','학년','학기','단원','영역','성취기준(코드)','초학문적 주제','성취기준 해설','차시（단원 기준）','학습 내용·원문 메모','운영 여부','교과서 학기 메모','확인 사항','원본 탭','원본 행','행 ID','원본 행 전체'];
+  const values=[header],subjects={국:'국어',수:'수학',사:'사회',도:'도덕',과:'과학',실:'실과',미:'미술',음:'음악',체:'체육',영:'영어'};
+  for(let term=1;term<=2;term++){
+   const sheet=book.sheets.find(s=>s.properties.title===titles[term-1]);if(!sheet)throw new Error(titles[term-1]+' 탭이 없습니다.');
+   const raw=[];
+   for(const data of sheet.data||[])for(const [i,row]of(data.rowData||[]).entries())raw[(data.startRow||0)+i]=(row.values||[]).map(c=>c.formattedValue||'');
+   const expanded=raw.map(r=>r?[...r]:[]);
+   for(const m of sheet.merges||[]){const value=raw[m.startRowIndex]?.[m.startColumnIndex]||'';for(let r=m.startRowIndex;r<m.endRowIndex;r++){expanded[r]||=[];for(let c=m.startColumnIndex;c<m.endColumnIndex;c++)expanded[r][c]=value;}}
+   for(let i=1;i<expanded.length;i++){
+    const r=expanded[i]||[],standard=clean(r[4]);if(!/^\[\s*6[^\]]+\]/.test(standard))continue;
+    const code=standard.match(/^\[\s*6([^\d\s]+)\s*\d/),subject=subjects[code?.[1]]||'교과 확인 필요';
+    const unit=clean(r[1]),memo=(raw[i]||[]).slice(5).map(clean).filter(Boolean).join(' · ');
+    const bookTerm=unit.match(/([12])학기/g)?.join(' / ')||'';
+    const operation=/실제\s*미운영/.test(unit+' '+memo)?'미운영':/UOI\s*미포함/.test(unit+' '+memo)?'UOI 미포함':'';
+    const flags=[];
+    if(bookTerm&&!bookTerm.includes(term+'학기'))flags.push('원본 탭 학기와 단원 메모의 학기가 다름');
+    if(/UOI.*포함|실제|미운영/.test(unit+' '+memo))flags.push('운영 메모 확인');
+    if(subject==='교과 확인 필요')flags.push('교과 확인 필요');
+    values.push([subject,'6',`6-${term}`,unit,clean(r[3]),standard.replace(/^\[([^\]]+)\]/,(_,c)=>'['+c.replace(/\s/g,'')+']'),clean(r[0]),'',clean(r[2]),memo,operation,bookTerm,flags.join(' · '),titles[term-1],String(i+1),`g6-${sheet.properties.sheetId}-${i+1}`,JSON.stringify(raw[i]||[])]);
+   }
+  }
+  if(values.length<2)throw new Error('옮길 성취기준을 찾지 못했습니다. 기존 탭은 변경하지 않았습니다.');
+  const id=16061016;
+  const requests=[{addSheet:{properties:{sheetId:id,title:'웹앱 연동',gridProperties:{rowCount:Math.max(1000,values.length+100),columnCount:17,frozenRowCount:1}}}},
+   {updateCells:{start:{sheetId:id,rowIndex:0,columnIndex:0},rows:values.map(r=>({values:r.map(v=>({userEnteredValue:{stringValue:String(v)}}))})),fields:'userEnteredValue'}},
+   {repeatCell:{range:{sheetId:id,startRowIndex:0,endRowIndex:1},cell:{userEnteredFormat:{backgroundColor:{red:0.08,green:0.35,blue:0.29},textFormat:{bold:true,foregroundColor:{red:1,green:1,blue:1}}}},fields:'userEnteredFormat'}},
+   {repeatCell:{range:{sheetId:id},cell:{userEnteredFormat:{wrapStrategy:'WRAP',verticalAlignment:'TOP'}},fields:'userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment'}},
+   {updateDimensionProperties:{range:{sheetId:id,dimension:'COLUMNS',startIndex:0,endIndex:17},properties:{pixelSize:140},fields:'pixelSize'}},
+   {updateDimensionProperties:{range:{sheetId:id,dimension:'COLUMNS',startIndex:5,endIndex:6},properties:{pixelSize:450},fields:'pixelSize'}},
+   {setDataValidation:{range:{sheetId:id,startRowIndex:1,startColumnIndex:6,endColumnIndex:7},rule:{condition:{type:'ONE_OF_LIST',values:THEMES.map(t=>({userEnteredValue:t.ko}))},strict:false,showCustomUi:true}}},
+   {updateCells:{range:{sheetId:id,startRowIndex:0,endRowIndex:1,startColumnIndex:8,endColumnIndex:9},rows:[{values:[{note:'차시는 원본 단원에 배정된 값입니다. 성취기준별 차시가 아니므로 행별 합산하지 않습니다.'}]}],fields:'note'}}];
+  status.textContent=' 연동 탭에 저장 중…';await sheetsRequest(':batchUpdate',{method:'POST',body:JSON.stringify({requests})});
+  SOURCES[6].gid=String(id);configureSource();googleSheetTitle='';updateSourceUI();toast(`6학년 ${values.length-1}행을 연동 탭에 구성했습니다`);
+ }catch(e){status.textContent=' '+e.message;button.disabled=false;}
+ finally{mappingSaving=false;if(!$('#setupGrade6')){loading=false;await sync(true);}}
+}
+
 /* ===================== boot ===================== */
 (function boot() {
-  const cached = store.get('uoi.cache', null);
+  updateSourceUI();
+  const cached = store.get(gradeKey('cache'), null);
   if (cached && cached.data) {
     try { applyData(cached.data); setSync('busy', `${fmtTime(cached.at)} 캐시 표시 · 최신 확인 중`); } catch (e) { console.warn('cache ignored', e); }
   }
