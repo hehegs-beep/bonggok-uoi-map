@@ -4,7 +4,8 @@ function sheet_() { return SpreadsheetApp.openById(SHEET_ID).getSheetById(0); }
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile('Editor');
   template.code = String(e.parameter.code || '');
-  return template.evaluate().setTitle('UOI 주제 수정');
+  template.channel = String(e.parameter.channel || '');
+  return template.evaluate().setTitle('UOI 주제 수정').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function listMappings(code) {
   if (!/^[0-9가-힣A-Za-z-]+$/.test(code)) throw new Error('성취기준 코드를 확인해 주세요.');
