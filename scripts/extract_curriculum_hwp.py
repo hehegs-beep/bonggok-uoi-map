@@ -9,12 +9,14 @@ from pathlib import Path
 sys.path.insert(0,'tmp/vendor')
 import olefile
 z=zipfile.ZipFile('tmp/pdfs/curriculum.zip')
-for n in z.namelist():
+items=[(n,z.read(n)) for n in z.namelist()]
+if Path('tmp/pdfs/book15.hwp').exists():items.append(('[별책15] 통합교과.hwp',Path('tmp/pdfs/book15.hwp').read_bytes()))
+for n,content in items:
  try:name=n.encode('cp437').decode('cp949')
  except UnicodeError:name=n
- m=re.search(r'별책(5|6|7|8|9|10|11|12|13|14)\]',name)
+ m=re.search(r'별책(5|6|7|8|9|10|11|12|13|14|15)\]',name)
  if not m:continue
- o=olefile.OleFileIO(io.BytesIO(z.read(n)))
+ o=olefile.OleFileIO(io.BytesIO(content))
  compressed=bool(struct.unpack_from('<I',o.openstream('FileHeader').read(),36)[0]&1)
  texts=[]
  for stream in o.listdir():

@@ -68,7 +68,7 @@ def hwp_paragraphs(text):
         else 'stop' if re.match(r'^3\.\s*교수',line) else 'paragraph')
   yield {'kind':kind,'text':line,'page':None,'endPage':None}
 
-def build_book(number, subject, drive, payload):
+def build_book(number, subject, drive, payload, include_lower=False):
  source=f'upper-{number}'
  is_hwp=True
  rawpath=INPUT/f'book{number}.hwp.txt'
@@ -97,7 +97,9 @@ def build_book(number, subject, drive, payload):
    if '중학교' in text or '고등학교' in text:
     if active:break
    current_groups=[];mode='standards';continue
-  if kind=='stop' and active:break
+  if kind=='stop' and active:
+   if number!=15:break
+   active=False;mode='standards';current_groups=[];continue
   if kind=='heading':
    title=HEADING.match(text)[2];mode='standards';current_groups=[];continue
   if kind=='mode':
@@ -110,19 +112,19 @@ def build_book(number, subject, drive, payload):
    match=CODE.match(text)
    if not match:continue
    code=codes(match[0])[0]
-   if not code.startswith(('4','6')):
+   if not code.startswith(('2','4','6') if include_lower else ('4','6')):
     if active and code.startswith(('9','10','12')):break
     continue
    active=True;prefix=code.rsplit('-',1)[0]
    if prefix not in payload['groups']:
-    band='3~4학년군' if code.startswith('4') else '5~6학년군'
+    band='1~2학년군' if code.startswith('2') else '3~4학년군' if code.startswith('4') else '5~6학년군'
     payload['groups'][prefix]={'title':title,'source':source,'grade':band,'pages':[],'common':[],'commonItems':[],'explanationCommon':[]}
     if number==6:payload['groups'][prefix]['commonScope']='초등학교 3~6학년 · 도덕'
    group=payload['groups'][prefix]
    if item['page'] and item['page'] not in group['pages']:group['pages'].append(item['page'])
    if prefix not in current_groups:current_groups.append(prefix)
    if code not in payload['entries']:
-    payload['entries'][code]={'group':prefix,'explanation':None,'notes':[],'links':[],'textType':'원문 발췌'}
+    payload['entries'][code]={'group':prefix,'explanation':None,'notes':[],'links':[],'textType':'원문 발췌','statement':text[match.end():].strip()}
     source_counts['standards']+=1
    continue
   if not active or not current_groups or kind=='subtopic':continue

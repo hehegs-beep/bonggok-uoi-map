@@ -448,7 +448,7 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="curriculum-data.js?v=20261016-upper"></script>
+<script src="curriculum-data.js?v=20261016-focused"></script>
 <script>
 (() => {
 'use strict';
@@ -483,7 +483,6 @@ const THEMES = [
   { key: 'STP',   ko: '우리 모두의 지구',          en: 'Sharing the planet',              h: 175 },
 ];
 const SUBJECT_ORDER = ['국어', '도덕', '사회', '수학', '과학', '실과', '바른생활', '슬기로운생활', '즐거운생활', '통합', '영어', '체육', '음악', '미술'];
-const CURRICULUM_REFERENCES={국어:'1UER7JNfY-ZIZmHJLUeqU6HLdnBAHk7cl',도덕:'11S5V5X307M8WXDR8qsNRHHwoCw2Ja52y',사회:'1PqHh7kMJ8VH072jSoWw9g-RXGqjmWf2U',수학:'1a4QhqW1UOC5MuG-jCbELrdUwkf6rwF7z',과학:'1JxNcH-w_MeQE3cz02ChiTxk_XRAfMixt',실과:'1Unr9P-hxWKSFFkg4YmbcV9Hs2zOV7JEF',체육:'1t3oqQSRASYYwa6r7epCOUJYEFD1o7qe6',음악:'1vNuvlMpA6QPNBdb4aN2K9XOLRvTnhAkW',미술:'16qgKhlHP6pgEkv6SM5rWDPgTAnd5Bu-b',영어:'1sw2EX1YkQBcUiEuuhNzMVrH8E18UFVIQ'};
 const INTEGRATED_UNITS = ['학교', '사람들', '우리나라', '탐험', '하루', '약속', '상상', '이야기'];
 const NONE = 'NONE';
 
@@ -727,9 +726,8 @@ function onFilterChange() { store.set(gradeKey('filters'), filter); updateResetS
 function matchQ(p, q) {
   if (!q) return true;
   const entry = window.CURRICULUM_GUIDANCE?.entries[p.codeLabel];
-  const guidanceGroup=entry?window.CURRICULUM_GUIDANCE.groups[entry.group]:null;
-  const guidance = entry ? [entry.explanation?.text || '', ...entry.notes.map(n=>n.text), ...entry.links.map(n=>n.text), ...guidanceGroup.common, ...(guidanceGroup.explanationCommon||[]).map(n=>n.text)].join(' ') : '';
-  const hay = [guidance, p.codeLabel, p.text, p.explanation, p.unit, p.area, p.subject, ...p.themes.map((t) => themeOf(t).ko + ' ' + themeOf(t).key)].join(' ').toLowerCase();
+  const guidance = entry ? [entry.displayExplanation?.text || '', ...(entry.displayNotes||[]).map(n=>n.text)].join(' ') : '';
+  const hay = [guidance, p.codeLabel, p.text, p.unit, p.area, p.subject, ...p.themes.map((t) => themeOf(t).ko + ' ' + themeOf(t).key)].join(' ').toLowerCase();
   return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w) || hay.replace(/\s/g, '').includes(w));
 }
 function matchPlacement(p) {
@@ -767,8 +765,6 @@ function render() {
   $('#statusLine').innerHTML = n
     ? `<span>필터 적용 중</span><span>성취기준 <b class="num">${codes.size}</b>개</span><span>매핑 행 <b class="num">${ps.length}</b>행</span><span>(전체 ${model.standards.size}개 / ${model.placements.length}행)</span>`
     : `<span>성취기준 <b class="num">${model.standards.size}</b>개</span><span>매핑 행 <b class="num">${model.placements.length}</b>행</span><span>주제 미지정 성취기준 <b class="num">${[...model.standards.values()].filter((s) => s.themes.size === 0).length}</b>개</span>`;
-  const guidanceCount=[...codes].filter(code=>window.CURRICULUM_GUIDANCE?.entries[code]).length;
-  $('#statusLine').insertAdjacentHTML('beforeend',`<span title="원문의 개별 해설과 영역 공통 고려 사항을 코드로 연결한 수입니다. 개별 해설이 없는 기준도 포함합니다.">교육과정 연결 <b class="num">${guidanceCount}/${codes.size}</b>개</span>`);
   if (view === 'unit') renderUnit(ps);
   else if (view === 'theme') renderTheme(ps);
   else if (view === 'standard') renderStandard(ps, codes);
@@ -853,7 +849,8 @@ function renderStandard(ps, codes) {
       const pl = mine.filter((p) => p.semester === sem).sort((a, b) => unitRank(a.unit) - unitRank(b.unit));
       html += `<td class="semcell">${pl.map((p) => `<span class="pl">${p.themes.length ? p.themes.map((t) => badge(t)).join('') : badge(NONE)}<span>${esc(p.unit)}</span></span>`).join('') || '<span class="pl" style="color:var(--fg-3)">—</span>'}</td>`;
     }
-    html += `<td class="expl ${s.explanation ? 'yes' : ''}">${s.explanation ? '있음' : '—'}</td></tr>`;
+    const hasExplanation=!!window.CURRICULUM_GUIDANCE?.entries[s.codeLabel]?.displayExplanation;
+    html += `<td class="expl ${hasExplanation ? 'yes' : ''}">${hasExplanation ? '있음' : '—'}</td></tr>`;
   }
   el.innerHTML = html + '</tbody></table></div>';
 }
@@ -915,31 +912,21 @@ function openDetail(code) {
     <div class="text">${esc(s.text)}</div>
     <div><h3>매핑된 주제</h3><div class="themesum">${themes.length ? themes.map((t) => `${badge(t, 'lg')}<span style="font-size:12.5px;color:var(--fg-2);align-self:center;margin-right:8px">${esc(themeOf(t).ko)}</span>`).join('') : badge(NONE, 'lg')}</div></div>
     <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${mappingControl(p)}${p.note?`<span class="placement-note">${esc(p.note)}</span>`:''}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
-    ${curriculumPanel(s)}
-    <details ${window.CURRICULUM_GUIDANCE?.entries[s.codeLabel]?'':'open'}><summary>시트에 기록된 해설</summary><div><h3>시트 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div></details>`;
+    ${curriculumPanel(s)}`;
   if (!detail.open) detail.showModal();
   $('#dBody').scrollTop = 0;
   $('#dClose').focus();
 }
 function curriculumPanel(standard) {
-  const data=window.CURRICULUM_GUIDANCE;
-  const entry=data?.entries[standard.codeLabel];
-  if(!entry){const file=CURRICULUM_REFERENCES[nospace(standard.subject)];return `<section><h3>교육과정 해설·고려 사항</h3><p class="guidance-intro">이 코드의 해설·고려 사항 요약은 아직 연결하지 않았습니다. 아래 시트 해설과 과목 원문을 확인해 주세요.</p>${file?`<a class="guidance-source" href="https://drive.google.com/file/d/${file}/view" target="_blank" rel="noopener">${esc(standard.subject)} 교육과정 원문 열기 ↗</a>`:''}</section>`;}
-  const group=data.groups[entry.group],source=data.sources[group.source];
-  const scope=group.commonScope||group.grade||source.grade;
-  const textType=entry.textType||source.textType||'원문 요약';
-  const sourceLink=(page,label='원문 확인')=>{
-    const hasPage=Number.isInteger(page)&&page>0;
-    return `<a class="guidance-source" href="https://drive.google.com/file/d/${esc(source.fileId)}/view${hasPage?'#page='+page:''}" target="_blank" rel="noopener">${esc(label)} · ${hasPage?`PDF ${page}쪽 / 본문 ${page-6}쪽`:esc(scope+' · '+group.title+' 항목')} ↗</a>`;
-  };
-  const explanation=entry.explanation ? `<div class="expl">${esc(entry.explanation.text)}</div>${sourceLink(entry.explanation.page)}` : `<div class="expl none">이 성취기준에는 원문에 별도로 제시된 해설이 없습니다. 적용 시 고려 사항을 함께 확인해 주세요.</div>${sourceLink(group.pages[0])}`;
-  const notes=entry.notes.map(note=>`<article class="guidance-card"><span class="guidance-label">${esc(note.basis)}</span><p>${esc(note.text)}</p>${sourceLink(note.page)}</article>`).join('');
-  const links=entry.links.map(link=>`<article class="guidance-card"><span class="guidance-label">원문에서 제시한 영역 간 연계</span><p>${esc(link.text)}</p><p>${link.codes.map(code=>`<span class="code">${esc(code)}</span>`).join(' · ')}</p>${sourceLink(link.page)}</article>`).join('');
-  const common=group.commonItems?group.commonItems.map(item=>`<li>${esc(item.text)}<br>${sourceLink(item.page)}</li>`).join(''):group.common.map(text=>`<li>${esc(text)}</li>`).join('');
-  const commonExplanation=group.explanationCommon?.length?`<details class="guidance-common"><summary>영역 공통 해설 · ${esc(group.title)}</summary>${group.explanationCommon.map(item=>`<p>${esc(item.text)}</p>${sourceLink(item.page)}`).join('')}</details>`:'';
-  const official=source.officialUrl?`<a class="guidance-source" href="${esc(source.officialUrl)}" target="_blank" rel="noopener">교육부 고시 원문 게시물 ↗</a>`:'';
-  return `<section class="curriculum-guidance"><h3>성취기준 해설</h3><p class="guidance-intro">${esc(source.title)} · ${esc(scope)}<br>아래 내용은 <strong>교육과정 ${esc(textType)}</strong>입니다. 매핑은 성취기준 코드를 기준으로 하며, 고려 사항의 적용 범위를 함께 표시했습니다.</p>${explanation}${commonExplanation}<h3>성취기준 적용 시 고려 사항</h3>${notes||'<p class="guidance-intro">원문에 이 코드만 따로 지정한 고려 사항은 없습니다. 아래 영역 공통 사항이 함께 연결되어 있습니다.</p>'}${links}<details class="guidance-common" ${entry.notes.length?'':'open'}><summary>영역 공통 · ${esc(group.title)} (${group.common.length}개)</summary><p class="guidance-intro">적용 범위: ${esc(scope)} · ${esc(group.title)} 영역</p><ul class="guidance-list">${common}</ul>${group.commonItems?'':sourceLink(group.pages[group.pages.length-1])}</details><p class="guidance-intro">‘원문에 코드 명시’는 원문이 해당 코드를 직접 제시한 항목이고, ‘활동 내용으로 연결’은 관련 활동에 근거해 연결한 항목입니다. 영역 공통 사항은 해당 영역의 성취기준에 함께 적용되는 지도 맥락이며, 모든 단원에서 각각 수행해야 할 활동을 뜻하지 않습니다.${source.format==='hwp'?' 원문 문장을 발췌하고 줄바꿈과 공백을 정리했습니다. PDF 쪽수를 대조하지 못한 항목은 학년군과 영역명으로 출처를 표시합니다.':''}</p>${official}</section>`;
+  const entry=window.CURRICULUM_GUIDANCE?.entries[standard.codeLabel];
+  if(!entry)return '';
+  const text=value=>esc(value.replace(/^\[[^\]]+\]\s+/,''));
+  const explanation=entry.displayExplanation?.text;
+  const notes=entry.displayNotes||[];
+  if(!explanation&&!notes.length)return '';
+  return `<section class="curriculum-guidance">${explanation?`<h3>성취기준 해설</h3><div class="expl">${text(explanation)}</div>`:''}${notes.length?`<h3>지도 시 고려 사항</h3><ul class="guidance-list">${notes.map(note=>`<li>${text(note.text)}</li>`).join('')}</ul>`:''}</section>`;
 }
+
 function sheetRowUrl(row) { return `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/edit?gid=${CONFIG.gid}#gid=${CONFIG.gid}&range=F${row}`; }
 $('#dClose').addEventListener('click', () => detail.close());
 // close only on a click outside the panel itself (the backdrop), not on its empty inner space
