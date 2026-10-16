@@ -311,7 +311,6 @@ dialog.modal { width: min(560px, calc(100% - 32px)); border-radius: 12px; border
   dialog.drawer[open], .sync.busy .dot, .iconbtn.spin svg { animation: none; }
   .toast { transition: none; }
 }
-
 body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px); }
 .board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .board > .none { grid-column: 1 / -1; }
@@ -319,7 +318,6 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 .board > .none > header { grid-column:1/-1; }
 .col { min-width:0; }
 .tcard .txt { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-.edit-note { font-size:13px; color:var(--fg-2); }
 @media(min-width:1500px) { .board { grid-template-columns:repeat(6,minmax(0,1fr)); } .board > .none { grid-template-columns:repeat(6,minmax(0,1fr)); } }
 @media(max-width:720px) { .board, .board > .none { grid-template-columns:minmax(0,1fr); } }
 </style>
@@ -394,7 +392,6 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 <dialog class="modal" id="settings" aria-label="설정">
   <div class="mhead"><h2>데이터 연결 설정</h2></div>
   <form class="mbody" id="settingsForm" method="dialog">
-    <div class="field"><label for="sEditor">구글 시트 편집창 주소</label><input type="url" id="sEditor" placeholder="https://script.google.com/macros/s/…/exec"><div class="hint">연결 후 상세창의 ‘주제 수정’ 버튼으로 단원별 주제를 저장할 수 있습니다. 구글 계정의 시트 편집 권한이 필요합니다.</div></div>
     <div class="field">
       <label for="sUrl">CSV 주소 (선택)</label>
       <input type="url" id="sUrl" placeholder="비워 두면 기본 시트(gid=0)를 직접 읽습니다">
@@ -628,7 +625,7 @@ function buildModel({ header, rows }) {
 }
 
 /* ===================== state ===================== */
-const settings = Object.assign({ editorUrl: 'https://script.google.com/a/macros/bonggokcho.com/s/AKfycbw85b8aC9Qn9ejXZNIT_Fep3aBAYk6nKSxKowZQyYLTd4yBkcHTGVj8fUwJ5-GmmT4Z/exec', customUrl: '', transport: 'auto', pollSeconds: CONFIG.pollSeconds }, store.get('uoi.settings', {}));
+const settings = Object.assign({ customUrl: '', transport: 'auto', pollSeconds: CONFIG.pollSeconds }, store.get('uoi.settings', {}));
 const filter = Object.assign({ q: '', subjects: [], semesters: [], area: '', themes: [] }, store.get('uoi.filters', {}));
 let view = (location.hash.replace('#', '') || store.get('uoi.view', 'unit'));
 if (!['unit', 'theme', 'standard', 'summary'].includes(view)) view = 'unit';
@@ -865,17 +862,6 @@ function renderSummary(ps) {
 
 /* ===================== detail drawer ===================== */
 const detail = $('#detail');
-let editorSession = null;
-window.addEventListener('message', (event) => {
-  const data = event.data;
-  if (!editorSession || !detail.open || !/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin) || !data || data.type !== 'uoi-saved' || data.channel !== editorSession.channel || data.code !== editorSession.code || !Array.isArray(data.topics) || data.topics.some(t => !THEMES.some(x=>x.ko===t))) return;
-  const p = model.placements.find(p => p.row === data.row && p.codeLabel === data.code);
-  if (!p) return;
-  p.themes = data.topics.map(t => THEMES.find(x=>x.ko===t).key);
-  const standard = model.standards.get(p.code);
-  standard.themes = new Set(standard.placements.flatMap(p=>p.themes));
-  render(); toast('주제를 저장했습니다. 구글 시트에도 반영됐습니다.');
-});
 document.querySelector('main').addEventListener('click', (e) => { const t = e.target.closest('[data-code]'); if (t) openDetail(t.dataset.code); });
 document.querySelector('main').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('tr[data-code]')) openDetail(e.target.dataset.code); });
 function openDetail(code) {
@@ -887,24 +873,9 @@ function openDetail(code) {
   const themes = [...s.themes];
   $('#dBody').innerHTML = `
     <div class="text">${esc(s.text)}</div>
-    <section><h3>단원별 주제 수정</h3><p class="edit-note">주제를 선택하고 저장하면 구글 시트에도 반영됩니다.</p><div id="inlineEditor"></div></section>
     <div><h3>매핑된 주제</h3><div class="themesum">${themes.length ? themes.map((t) => `${badge(t, 'lg')}<span style="font-size:12.5px;color:var(--fg-2);align-self:center;margin-right:8px">${esc(themeOf(t).ko)}</span>`).join('') : badge(NONE, 'lg')}</div></div>
     <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${p.themes.length ? p.themes.map((t) => badge(t)).join('') : badge(NONE)}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
     <div><h3>성취기준 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div>`;
-  if (settings.editorUrl) {
-    const url = new URL(settings.editorUrl);
-    url.searchParams.set('code', s.codeLabel);
-    url.searchParams.set('channel', crypto.randomUUID());
-    editorSession = { channel: url.searchParams.get('channel'), code: s.codeLabel };
-    const frame = document.createElement('iframe');
-    frame.title = '단원별 주제 선택 및 저장'; frame.src = url.href;
-    frame.style.cssText = 'width:100%;height:590px;border:1px solid var(--line);border-radius:10px;background:white';
-    $('#inlineEditor').append(frame);
-    const help = document.createElement('p'); help.className = 'edit-note';
-    const login = document.createElement('a'); login.href = url.href; login.target = '_blank'; login.rel = 'noopener';
-    login.textContent = '처음 사용 시 학교 계정 연결';
-    help.append(login, document.createTextNode(' · 연결 후 상세창을 다시 열어 주세요.')); $('#inlineEditor').append(help);
-  } else { $('#inlineEditor').textContent = '설정에서 편집 연결 주소를 입력해 주세요.'; }
   if (!detail.open) detail.showModal();
   $('#dBody').scrollTop = 0;
   $('#dClose').focus();
@@ -921,16 +892,13 @@ const sdlg = $('#settings');
 $('#sheetLink').href = CONFIG.sheetUrl;
 $('#sDefaultUrl').textContent = CONFIG.csvUrl;
 $('#settingsBtn').addEventListener('click', () => {
-  $('#sEditor').value = settings.editorUrl || ''; $('#sUrl').value = settings.customUrl; $('#sTransport').value = settings.transport; $('#sPoll').value = String(settings.pollSeconds);
+  $('#sUrl').value = settings.customUrl; $('#sTransport').value = settings.transport; $('#sPoll').value = String(settings.pollSeconds);
   sdlg.showModal();
 });
 $('#sCancel').addEventListener('click', () => sdlg.close());
 sdlg.addEventListener('click', (e) => { if (e.target === sdlg && outside(sdlg, e)) sdlg.close(); });
 $('#settingsForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const editorUrl = clean($('#sEditor').value);
-  if (editorUrl && !/^https:\/\/script\.google\.com\/(?:a\/macros\/[a-zA-Z0-9.-]+|macros)\/s\/[\w-]+\/exec$/.test(editorUrl)) { toast('Apps Script 배포 주소(/exec)를 확인해 주세요'); return; }
-  settings.editorUrl = editorUrl;
   settings.customUrl = clean($('#sUrl').value); settings.transport = $('#sTransport').value; settings.pollSeconds = +$('#sPoll').value;
   store.set('uoi.settings', settings); sdlg.close(); schedulePoll(); sync(true);
 });
