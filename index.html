@@ -368,6 +368,7 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
 </header>
 
 <div class="rail" id="rail">
+  <aside id="localFileNotice" hidden style="padding:14px;border:1px solid #d9b65e;background:#fff9e8;border-radius:10px;line-height:1.7;margin-top:12px" role="note">지금은 컴퓨터에 저장된 HTML 파일을 보고 있습니다. 구글 로그인과 시트 저장은 배포된 웹앱에서 사용할 수 있습니다.<br><a id="hostedAppLink" class="btn primary" href="https://hehegs-beep.github.io/bonggok-uoi-map/">웹앱에서 열기</a></aside>
   <nav id="gradeNav" class="grade-nav" aria-label="학년 선택"></nav>
   <div id="sourceNote" class="source-note"></div>
   <div class="rail-top">
@@ -946,6 +947,7 @@ gis.onerror = () => { gis.dataset.failed = 'true'; };
 document.head.append(gis);
 function clearGoogleConnection() { googleAccessToken = ''; googleTokenExpires = 0; googleSheetTitle = ''; }
 function authorizeGoogle() {
+  if(location.protocol==='file:')return Promise.reject(new Error('저장된 HTML 파일에서는 구글 로그인을 사용할 수 없습니다. 화면 위의 ‘웹앱에서 열기’를 눌러 주세요.'));
   if (googleAccessToken && Date.now() < googleTokenExpires) return Promise.resolve();
   const id = settings.oauthClientId || CONFIG.oauthClientId;
   if (!id) return Promise.reject(new Error('구글 직접 저장 연결 설정이 필요합니다. 설정에서 연결 ID를 등록해 주세요.'));
@@ -1233,6 +1235,10 @@ async function initializeGrade6(){
 
 /* ===================== boot ===================== */
 (function boot() {
+  if(location.protocol==='file:'){
+    $('#localFileNotice').hidden=false;
+    $('#hostedAppLink').href=`https://hehegs-beep.github.io/bonggok-uoi-map/?grade=${activeGrade}#${view}`;
+  }
   updateSourceUI();
   const cached = store.get(gradeKey('cache'), null);
   if (cached && cached.data) {
