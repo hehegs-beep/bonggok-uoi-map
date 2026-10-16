@@ -416,17 +416,15 @@ body.theme-view main { max-width: none; padding-inline: clamp(12px, 1.5vw, 28px)
     <div class="field"><label for="sClient">구글 직접 저장 연결 ID</label><input type="text" id="sClient" placeholder="관리자가 한 번 설정합니다"><div class="hint">Google Cloud에서 만든 웹용 OAuth 클라이언트 ID입니다. 비밀번호나 비밀 키를 입력하지 마세요. 등록 후 주제 배지를 눌러 구글 계정에 연결하면 시트에 저장됩니다.</div><button class="btn" type="button" id="disconnectGoogle">이 브라우저에서 구글 연결 끊기</button></div>
     <div class="field">
       <label for="sUrl">CSV 주소 (선택)</label>
-      <input type="url" id="sUrl" placeholder="비워 두면 기본 시트(gid=0)를 직접 읽습니다">
+      <input type="url" id="sUrl" placeholder="비워 두면 선택한 학년의 원본을 읽습니다">
       <div class="hint">「파일 › 공유 › 웹에 게시」에서 받은 CSV 주소를 넣으면 그 주소를 읽습니다. 비워 두면 아래 기본 주소를 사용합니다.<br><code id="sDefaultUrl"></code></div>
     </div>
     <div class="field">
       <label for="sTransport">전송 방식</label>
       <select id="sTransport">
-        <option value="auto">자동 (fetch 실패 시 JSONP로 전환)</option>
-        <option value="csv">CSV fetch만</option>
-        <option value="jsonp">JSONP만 (파일을 직접 열 때)</option>
+        <option value="auto">전체 CSV · 구글 연결 시 API</option>
       </select>
-      <div class="hint">파일을 더블클릭해 열면(file://) 브라우저가 fetch를 막으므로 자동으로 JSONP를 씁니다. 웹 서버에 올리면 CSV fetch가 쓰입니다.</div>
+      <div class="hint">시트 필터로 숨겨진 행까지 읽어 학년별로 표시합니다.</div>
     </div>
     <div class="field">
       <label for="sPoll">자동 새로고침</label>
@@ -464,6 +462,7 @@ const SOURCES = {
   6:{sheetId:'1UpClLImzZvxnNpLg6_V97xu2mBh9CN_9js5e59pSlCo',title:'웹앱 연동',gid:'16061016'},
 };
 let activeGrade = Math.min(6,Math.max(1,Number(new URLSearchParams(location.search).get('grade')||localStorage.getItem('uoi.grade')||1))) || 1;
+activeGrade=Math.trunc(activeGrade);
 const CONFIG = {pollSeconds:60,oauthClientId:'48269719394-v8mngrqneiqibr60l75ef8i9plalhbnh.apps.googleusercontent.com'};
 function configureSource(){
  Object.assign(CONFIG,SOURCES[activeGrade]);
@@ -483,6 +482,7 @@ const THEMES = [
   { key: 'STP',   ko: '우리 모두의 지구',          en: 'Sharing the planet',              h: 175 },
 ];
 const SUBJECT_ORDER = ['국어', '도덕', '사회', '수학', '과학', '실과', '바른생활', '슬기로운생활', '즐거운생활', '통합', '영어', '체육', '음악', '미술'];
+const CURRICULUM_REFERENCES={국어:'1UER7JNfY-ZIZmHJLUeqU6HLdnBAHk7cl',도덕:'11S5V5X307M8WXDR8qsNRHHwoCw2Ja52y',사회:'1PqHh7kMJ8VH072jSoWw9g-RXGqjmWf2U',수학:'1a4QhqW1UOC5MuG-jCbELrdUwkf6rwF7z',과학:'1JxNcH-w_MeQE3cz02ChiTxk_XRAfMixt',실과:'1Unr9P-hxWKSFFkg4YmbcV9Hs2zOV7JEF',체육:'1t3oqQSRASYYwa6r7epCOUJYEFD1o7qe6',음악:'1vNuvlMpA6QPNBdb4aN2K9XOLRvTnhAkW',미술:'16qgKhlHP6pgEkv6SM5rWDPgTAnd5Bu-b',영어:'1sw2EX1YkQBcUiEuuhNzMVrH8E18UFVIQ'};
 const INTEGRATED_UNITS = ['학교', '사람들', '우리나라', '탐험', '하루', '약속', '상상', '이야기'];
 const NONE = 'NONE';
 
@@ -912,7 +912,7 @@ function openDetail(code) {
     <div><h3>매핑된 주제</h3><div class="themesum">${themes.length ? themes.map((t) => `${badge(t, 'lg')}<span style="font-size:12.5px;color:var(--fg-2);align-self:center;margin-right:8px">${esc(themeOf(t).ko)}</span>`).join('') : badge(NONE, 'lg')}</div></div>
     <div><h3>등장 단원 <span style="letter-spacing:0;text-transform:none">(${pl.length})</span></h3><ul class="plist">${pl.map((p) => `<li><span class="sem num">${esc(p.semester)}</span><span class="unit">${esc(p.unit)}</span>${mappingControl(p)}${p.note?`<span class="placement-note">${esc(p.note)}</span>`:''}<span class="sp"></span><a href="${esc(sheetRowUrl(p.row))}" target="_blank" rel="noopener" title="구글 시트에서 이 행 열기">시트 ${p.row}행 ↗</a></li>`).join('')}</ul></div>
     ${curriculumPanel(s)}
-    <details><summary>시트에 기록된 해설</summary><div><h3>시트 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div></details>`;
+    <details ${window.CURRICULUM_GUIDANCE?.entries[s.codeLabel]?'':'open'}><summary>시트에 기록된 해설</summary><div><h3>시트 해설</h3>${s.explanation ? `<div class="expl">${esc(s.explanation)}</div>` : `<div class="expl none">시트에 해설이 없습니다 (해당 없음).</div>`}</div></details>`;
   if (!detail.open) detail.showModal();
   $('#dBody').scrollTop = 0;
   $('#dClose').focus();
@@ -920,7 +920,7 @@ function openDetail(code) {
 function curriculumPanel(standard) {
   const data=window.CURRICULUM_GUIDANCE;
   const entry=data?.entries[standard.codeLabel];
-  if(!entry) return '<section><h3>교육과정 해설·고려 사항</h3><p class="guidance-intro">이 코드에 연결된 원문 자료가 없습니다. 아래 시트 해설을 확인해 주세요.</p></section>';
+  if(!entry){const file=CURRICULUM_REFERENCES[nospace(standard.subject)];return `<section><h3>교육과정 해설·고려 사항</h3><p class="guidance-intro">이 코드의 해설·고려 사항 요약은 아직 연결하지 않았습니다. 아래 시트 해설과 과목 원문을 확인해 주세요.</p>${file?`<a class="guidance-source" href="https://drive.google.com/file/d/${file}/view" target="_blank" rel="noopener">${esc(standard.subject)} 교육과정 원문 열기 ↗</a>`:''}</section>`;}
   const group=data.groups[entry.group],source=data.sources[group.source];
   const sourceLink=(page,label='원문 확인')=>`<a class="guidance-source" href="https://drive.google.com/file/d/${esc(source.fileId)}/view#page=${page}" target="_blank" rel="noopener">${esc(label)} · PDF ${page}쪽 / 본문 ${page-6}쪽 ↗</a>`;
   const explanation=entry.explanation ? `<div class="expl">${esc(entry.explanation.text)}</div>${sourceLink(entry.explanation.page)}` : `<div class="expl none">이 성취기준에는 원문에 별도로 제시된 해설이 없습니다. 적용 시 고려 사항을 함께 확인해 주세요.</div>${sourceLink(group.pages[0])}`;
@@ -1045,7 +1045,7 @@ const sdlg = $('#settings');
 $('#sheetLink').href = CONFIG.sheetUrl;
 $('#sDefaultUrl').textContent = CONFIG.csvUrl;
 $('#settingsBtn').addEventListener('click', () => {
-  $('#sClient').value = settings.oauthClientId || CONFIG.oauthClientId; $('#sUrl').value = settings.customUrl; $('#sTransport').value = settings.transport; $('#sPoll').value = String(settings.pollSeconds);
+  $('#sClient').value = settings.oauthClientId || CONFIG.oauthClientId; $('#sUrl').value = settings.customUrl; $('#sTransport').value = 'auto'; $('#sPoll').value = String(settings.pollSeconds);
   sdlg.showModal();
 });
 $('#sCancel').addEventListener('click', () => sdlg.close());
@@ -1123,7 +1123,7 @@ $('#gradeNav').addEventListener('click',e=>{
  const b=e.target.closest('[data-grade]');if(!b||Number(b.dataset.grade)===activeGrade)return;
  if(mappingSaving||googleAuthPending){toast('현재 저장 또는 구글 연결을 마친 뒤 학년을 바꿔 주세요');return;}
  store.set(gradeKey('filters'),filter);
- activeGrade=Number(b.dataset.grade);store.set('uoi.grade',String(activeGrade));
+ activeGrade=Number(b.dataset.grade);store.set('uoi.grade',activeGrade);
  const url=new URL(location.href);url.searchParams.set('grade',activeGrade);history.replaceState(null,'',url);
  sourceGeneration++;loading=false;model=null;dataHash='';lastSync=null;googleSheetTitle='';extraThemes.clear();
  configureSource();settings.customUrl=store.get(gradeKey('url'),'');
