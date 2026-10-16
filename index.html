@@ -1096,8 +1096,9 @@ async function sync(manual = false) {
     setSync('err', model ? `연결 실패 · ${cached ? fmtTime(cached.at) + ' 캐시 표시' : '이전 데이터 표시'}` : '불러오지 못했습니다');
     if (!model) {
       $('#statusLine').innerHTML = '';
-      $('#viewUnit').innerHTML = `<div class="empty"><strong>시트를 읽지 못했습니다</strong>${esc(err.message)}<br><br>6학년은 위의 ‘6학년 연동 탭 만들기’를 먼저 진행해 주세요.<br>시트가 「링크가 있는 모든 사용자」에게 공개되어 있는지, 또는 설정에서 CSV 주소가 맞는지 확인하세요.<br><br><button class="btn primary" id="retryBtn">다시 시도</button></div>`;
+      document.querySelector(`main > section[data-view="${view}"]`).innerHTML = `<div class="empty"><strong>시트를 읽지 못했습니다</strong>${esc(err.message)}<br><br>${activeGrade===6?'위의 ‘6학년 연동 탭 만들기’를 먼저 진행해 주세요.<br>':''}시트의 공개 설정이나 연결 상태를 확인해 주세요.<br><br><button class="btn primary" id="retryBtn">다시 시도</button><button class="btn" id="connectReadBtn">구글 연결해서 읽기</button></div>`;
       $('#retryBtn').addEventListener('click', () => sync(true));
+      $('#connectReadBtn').onclick=async()=>{try{await authorizeGoogle();await sync(true);}catch(e){toast(e.message);}};
     } else if (manual) toast('시트에 연결하지 못했습니다: ' + err.message);
   } finally { if(generation===sourceGeneration)loading = false; }
 }
@@ -1148,7 +1149,7 @@ async function initializeGrade6(){
   status.textContent=' 1·2학기 원본과 병합 셀을 읽는 중…';
   const titles=['1학기 종합','(수정중)2학기 종합'];
   const ranges=titles.map(t=>'ranges='+encodeURIComponent("'"+t+"'!A1:Q1500")).join('&');
-  const book=await sheetsRequest('?includeGridData=true&'+ranges+'&fields=sheets(properties,merges,data(startRow,startColumn,rowData.values.formattedValue))');
+  const book=await sheetsRequest('?includeGridData=true&'+ranges+'&fields=sheets(properties,merges,data(startRow,startColumn,rowData(values(formattedValue))))');
   const header=['교과','학년','학기','단원','영역','성취기준(코드)','초학문적 주제','성취기준 해설','차시（단원 기준）','학습 내용·원문 메모','운영 여부','교과서 학기 메모','확인 사항','원본 탭','원본 행','행 ID','원본 행 전체'];
   const values=[header],subjects={국:'국어',수:'수학',사:'사회',도:'도덕',과:'과학',실:'실과',미:'미술',음:'음악',체:'체육',영:'영어'};
   for(let term=1;term<=2;term++){
